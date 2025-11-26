@@ -1,2 +1,2 @@
-Generic Renderer Wrapper Pattern
+# components
 

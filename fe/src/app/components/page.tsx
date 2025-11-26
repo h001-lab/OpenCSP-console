@@ -17,33 +17,19 @@ import { Tag } from "@/components/ui/Tag/Tag";
 import { DenseTable } from "@/components/table/DenseTable";
 import { ListPanel } from "@/components/ui/ListPanel/ListPanel";
 import { PanelList } from "@/components/wrappers/PanelList";
+import { Instance, Column } from "@/components/types";
 
-const columns = [
-	{ key: "name", label: "Name", width: "30%" },
-	{ key: "type", label: "Type", width: "20%" },
-	{ key: "status", label: "Status", width: "20%" },
-	{ key: "created", label: "Created", width: "30%" },
+
+const columns: Column<Instance>[] = [
+  { key: "name", label: "Name", width: "20%" },
+  { key: "type", label: "Type", width: "20%" },
+  { key: "status", label: "Status" },
+  { key: "created", label: "Created", width: "30%" },
 ];
 
-const data = [
-	{
-		name: "Instance A",
-		type: "t3.medium",
-		status: "Running",
-		created: "2023-10-10",
-	},
-	{
-		name: "Instance B",
-		type: "t3.nano",
-		status: "Stopped",
-		created: "2023-10-12",
-	},
-	{
-		name: "Instance C",
-		type: "m5.large",
-		status: "Running",
-		created: "2023-11-01",
-	},
+const data: Instance[] = [
+  { name: "EC2", type: "t3.medium", status: "Running", created: "2023-10-10" },
+  { name: "S3", type: "Bucket", status: "Active", created: "2023-10-10"},
 ];
 
 const items = [
@@ -179,7 +165,7 @@ export default function Page() {
 
 			{/* Dense Table */}
 			<Panel title="Dense Table (AWS 스타일)">
-				<DenseTable columns={columns} data={data} />
+				<DenseTable<Instance> columns={columns} data={data} />
 			</Panel>
 
 			<p>Panel</p>

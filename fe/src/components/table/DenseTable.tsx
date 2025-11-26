@@ -1,19 +1,9 @@
 "use client";
 
+import { DenseTableProps } from "../types";
 import styles from "./DenseTable.module.css";
 
-interface Column {
-  key: string;
-  label: string;
-  width?: string | number;
-}
-
-interface DenseTableProps {
-  columns: Column[];
-  data: Record<string, any>[];
-}
-
-export function DenseTable({ columns, data }: DenseTableProps) {
+export function DenseTable<T>({ columns, data }: DenseTableProps<T>) {
   return (
     <div className={styles.tableWrapper}>
       <table className={styles.table}>
@@ -21,7 +11,7 @@ export function DenseTable({ columns, data }: DenseTableProps) {
           <tr>
             {columns.map(col => (
               <th
-                key={col.key}
+                key={String(col.key)}
                 className={styles.headerCell}
                 style={{ width: col.width }}
               >
@@ -35,8 +25,8 @@ export function DenseTable({ columns, data }: DenseTableProps) {
           {data.map((row, idx) => (
             <tr key={idx} className={styles.row}>
               {columns.map(col => (
-                <td key={col.key} className={styles.cell}>
-                  {row[col.key]}
+                <td key={String(col.key)} className={styles.cell}>
+                  {row[col.key] as React.ReactNode}
                 </td>
               ))}
             </tr>
