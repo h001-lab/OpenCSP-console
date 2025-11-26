@@ -1,0 +1,36 @@
+.tableWrapper {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--color-panel);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size);
+}
+
+.headerCell {
+  text-align: left;
+  padding: 6px 8px;
+  font-weight: 600;
+  background: #f5f7fa;
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.row {
+  height: 32px;
+  border-bottom: 1px solid var(--color-border);
+  transition: background 0.12s;
+}
+
+.row:hover {
+  background: #f0f4f8;
+}
+
+.cell {
+  padding: 4px 8px;
+  white-space: nowrap;
+}

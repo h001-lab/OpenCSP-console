@@ -1,0 +1,2 @@
+Generic Renderer Wrapper Pattern
+
