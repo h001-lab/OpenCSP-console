@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - "fe/**"
+      - "be/**"
+      - ".github/workflows/**"
+
+jobs:
+  ## -------------------------
+  ## FE (React/Next.js) Pipeline
+  ## -------------------------
+  fe-ci:
+    name: FE Lint & Build
+    runs-on: ubuntu-latest
+
+    # FE 폴더에 변경이 있을 때만 실행
+    if: contains(github.event.pull_request.changed_files, 'fe/')
+
+    defaults:
+      run:
+        working-directory: fe
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run Lint
+        run: npm run lint
+
+      - name: Build FE
+        run: npm run build
+
+
+  ## -------------------------
+  ## BE (Java / Gradle) Pipeline
+  ## -------------------------
+  be-ci:
+    name: BE Lint & Build
+    runs-on: ubuntu-latest
+
+    # BE 폴더에 변경이 있을 때만 실행
+    if: contains(github.event.pull_request.changed_files, 'be/')
+
+    defaults:
+      run:
+        working-directory: be
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
+      - name: Grant execute permission to gradlew
+        run: chmod +x ./gradlew
+
+      - name: Build BE
+        run: ./gradlew build
