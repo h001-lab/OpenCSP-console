@@ -1,0 +1,30 @@
+.navbar {
+  height: 48px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 0 16px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.left,
+.center,
+.right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 중앙 콘텐츠는 필요하면 가운데 정렬이 가능 */
+.center {
+  flex: 1;
+  justify-content: center;
+}
+
+/* 오른쪽은 자동으로 끝으로 밀림 */
+.right {
+  margin-left: auto;
+}
