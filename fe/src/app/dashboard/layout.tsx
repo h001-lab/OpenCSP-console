@@ -1,17 +1,17 @@
 import { Banner } from "@/components/ui/Banner/Banner";
+import { NavBar } from "@/components/ui/NavBar/NavBar";
 import { Sidebar } from "@/components/ui/Sidebar";
 import { SideBarItem } from "@/components/types";
-import { NavBar } from "@/components/ui/NavBar/NavBar";
 import Link from "next/link";
 
 const items: SideBarItem[] = [
     { label: "Home", path: "/" },
 	{ label: "Dashboard", path: "/dashboard" },
 	{ label: "Components", path: "/components" },
-	{ label: "Announcements", path: "/announcements" },
+    { label: "Announcements", path: "/announcements" },
 ];
 
-export default function HomeLayout({
+export default function DashboardLayout({
 	children,
 }: {
 	children: React.ReactNode;
@@ -30,9 +30,9 @@ export default function HomeLayout({
 					</>
 				}
 			/>
-			<div className="flex min-h-[calc(100vh-48px)]">
+			<div className="flex min-h-[calc(100vh-3rem)]">
 				<Sidebar items={items} />
-				<main className="flex-1 p-6">{children}</main>
+				<main className="flex-1 p-3">{children}</main>
 			</div>
 		</>
 	);

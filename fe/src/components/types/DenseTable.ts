@@ -6,6 +6,13 @@ export interface Instance {
   created: string;
 }
 
+export interface Announcement {
+  num: number;
+  name: React.ReactNode;
+  author: React.ReactNode;
+  created: React.ReactNode;
+}
+
 export interface Column<T> {
   key: keyof T;
   label: string;

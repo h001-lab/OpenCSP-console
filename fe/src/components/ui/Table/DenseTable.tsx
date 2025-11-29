@@ -1,6 +1,6 @@
 "use client";
 
-import { DenseTableProps } from "../types";
+import { DenseTableProps } from "@/components/types";
 import styles from "./DenseTable.module.css";
 
 export function DenseTable<T>({ columns, data }: DenseTableProps<T>) {

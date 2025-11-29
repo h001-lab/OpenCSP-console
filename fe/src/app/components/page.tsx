@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { Panel } from "@/components/ui/Panel/Panel";
 
-import { Modal } from "@/components/modals/Modal";
-import { FormModal } from "@/components/modals/FormModal";
-import { InputModal } from "@/components/modals/InputModal";
-import { ConfirmModal } from "@/components/modals/ConfirmModal";
+import { Modal } from "@/components/ui/Modals/Modal";
+import { FormModal } from "@/components/ui/Modals/FormModal";
+import { InputModal } from "@/components/ui/Modals/InputModal";
+import { ConfirmModal } from "@/components/ui/Modals/ConfirmModal";
 
 import { Button } from "@/components/ui/Button/Button";
 import { Input } from "@/components/ui/Input/Input";
@@ -14,22 +14,25 @@ import { Select } from "@/components/ui/Select/Select";
 import { Toggle } from "@/components/ui/Toggle/Toggle";
 import { Tag } from "@/components/ui/Tag/Tag";
 
-import { DenseTable } from "@/components/table/DenseTable";
+import { DenseTable } from "@/components/ui/Table/DenseTable";
 import { ListPanel } from "@/components/ui/ListPanel/ListPanel";
 import { PanelList } from "@/components/wrappers/PanelList";
 import { Instance, Column } from "@/components/types";
-
+import { Tabs } from "@/components/ui/Tabs/Tabs";
+import { TabList } from "@/components/wrappers/TabList";
+import { Tab } from "@/components/ui/Tabs/Tab";
+import { TabPanel } from "@/components/ui/Tabs/TabPanel";
 
 const columns: Column<Instance>[] = [
-  { key: "name", label: "Name", width: "20%" },
-  { key: "type", label: "Type", width: "20%" },
-  { key: "status", label: "Status" },
-  { key: "created", label: "Created", width: "30%" },
+	{ key: "name", label: "Name", width: "20%" },
+	{ key: "type", label: "Type", width: "20%" },
+	{ key: "status", label: "Status" },
+	{ key: "created", label: "Created", width: "30%" },
 ];
 
 const data: Instance[] = [
-  { name: "EC2", type: "t3.medium", status: "Running", created: "2023-10-10" },
-  { name: "S3", type: "Bucket", status: "Active", created: "2023-10-10"},
+	{ name: "EC2", type: "t3.medium", status: "Running", created: "2023-10-10" },
+	{ name: "S3", type: "Bucket", status: "Active", created: "2023-10-10" },
 ];
 
 const items = [
@@ -168,36 +171,54 @@ export default function Page() {
 				<DenseTable<Instance> columns={columns} data={data} />
 			</Panel>
 
-			<p>Panel</p>
-			<div className="flex gap-6 p-4 border border-gray-300 rounded mb-6">
-				<Panel title="AWS / GCP 스타일 패널">
-					<div>패널 내부 콘텐츠입니다.</div>
-					<div className="text-sm text-gray-600">컴팩트 + 엔터프라이즈 UI</div>
-					<Button>Detail</Button>
-				</Panel>
-				<Panel title="AWS / GCP 스타일 패널">
-					<div>패널 내부 콘텐츠입니다.</div>
-					<div className="text-sm text-gray-600">컴팩트 + 엔터프라이즈 UI</div>
-					<Button>Detail</Button>
-				</Panel>
-			</div>
 
-			<div className="mb-6">
-				<p>ListPanel</p>
-				<ListPanel
-					title="List Panel Example"
-					right={<Button variant="ghost">Open</Button>}
-				>
-					<div>리스트 패널 내부 콘텐츠입니다.</div>
-					<div className="text-sm text-gray-600">간단한 설명 텍스트</div>
-					<Button>Show</Button>
-				</ListPanel>
-			</div>
+			<p className="p-1 mt-3">Tabs + Panel Example</p>
 
-			<div className="flex flex-col gap-6  border border-gray-300 rounded mb-6 p-4">
-				<p>PanelList</p>
-				<PanelList items={items} />
-			</div>
+			<Tabs defaultTab="option1">
+				<TabList>
+					<Tab id="option1">Panel</Tab>
+					<Tab id="option2">ListPanel</Tab>
+					<Tab id="option3">PanelList</Tab>
+				</TabList>
+
+				<TabPanel id="option1">
+					<div className="flex gap-6 p-4 border border-gray-300 rounded mb-6">
+						<Panel title="AWS / GCP 스타일 패널">
+							<div>패널 내부 콘텐츠입니다.</div>
+							<div className="text-sm text-gray-600">
+								컴팩트 + 엔터프라이즈 UI
+							</div>
+							<Button>Detail</Button>
+						</Panel>
+						<Panel title="AWS / GCP 스타일 패널">
+							<div>패널 내부 콘텐츠입니다.</div>
+							<div className="text-sm text-gray-600">
+								컴팩트 + 엔터프라이즈 UI
+							</div>
+							<Button>Detail</Button>
+						</Panel>
+					</div>
+				</TabPanel>
+
+				<TabPanel id="option2">
+					<div className="mb-6">
+						<ListPanel
+							title="List Panel Example"
+							right={<Button variant="ghost">Open</Button>}
+						>
+							<div>리스트 패널 내부 콘텐츠입니다.</div>
+							<div className="text-sm text-gray-600">간단한 설명 텍스트</div>
+							<Button>Show</Button>
+						</ListPanel>
+					</div>
+				</TabPanel>
+
+				<TabPanel id="option3">
+					<div className="flex flex-col gap-6  border border-gray-300 rounded mb-6 p-4">
+						<PanelList items={items} />
+					</div>
+				</TabPanel>
+			</Tabs>
 		</>
 	);
 }
