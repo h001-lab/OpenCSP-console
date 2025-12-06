@@ -1,0 +1,13 @@
+body {
+  font-family: '맑은 고딕', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+}
+
+pre {
+  background-color: #f4f4f4;
+  border: 1px solid #ccc;
+  padding: 20px;
+  border-radius: 5px;
+  font-family: "Courier New", Courier, monospace;
+  white-space: pre-wrap; /* 줄 바꿈을 처리하여 긴 JSON도 화면에 맞게 표시 */
+  word-wrap: break-word;
+}

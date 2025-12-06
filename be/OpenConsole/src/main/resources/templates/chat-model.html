@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spring AI</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.bundle.min.js"></script>
+  <link href="/css/springai.css" rel="stylesheet" />
+  <script src="/js/springai.js"></script>
+  <script>
+    // ##### 제출 버튼을 클릭했을 때 실행하는 함수 #####
+    async function handleSubmit() {
+      try {
+        // 텍스트 질문을 얻고 대화 패널에 추가하기
+        const question = document.getElementById("question").value;
+        if (question === "") return;
+        springai.addUserQuestion(question, "chatPanel");
+
+        // 응답이 오기까지 스피너 보여주기
+        springai.setSpinner("spinner", true);
+
+				// AJAX 요청하고 응답받기
+				const response = await fetch('/ai/chat-model', {
+				  method: "post",
+					headers: {
+					  'Content-Type': 'application/x-www-form-urlencoded',
+					  'Accept': 'text/plain'
+					},					
+				  body: new URLSearchParams({ question })
+				});
+
+        // AI 모델 답변이 들어갈 위치를 대화 패널에 추가
+        const uuid = springai.addAnswerPlaceHolder("chatPanel");
+        
+        // 텍스트 답변 출력하기
+        springai.printAnswerText(response.body, uuid, "chatPanel");
+      } catch (error) {
+        console.log(error)
+      } finally {
+        //스피너 숨기기
+        springai.setSpinner("spinner", false);
+      }
+    } 
+  </script>
+</head>
+
+<body>
+  <div class="d-flex flex-column vh-100">
+    <div id="headPanel" class="navbar justify-content-between">
+      <a href="/" class="navbar-brand ps-2">
+        <img src="/image/spring_ai_logo_with_text.svg" width="200" />
+      </a>
+      <div id="spinner" class="spinner-border text-success d-none me-3" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
+
+    <div id="chatPanel" class="flex-grow-1 container-fluid h-100 my-2" style="overflow-y:auto; overflow-x:hidden;">
+      <div class="d-flex justify-content-start border-bottom m-2">
+        <table>
+          <tr>
+            <td><img src="/image/assistant.png" width="50" /></td>
+            <td><span>질문을 올려주세요.</span></td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <div id="inputPanel" class="bg-secondary-subtle">
+      <div class="input-group p-2">
+        <span class="input-group-text">질문</span>
+        <textarea id="question" class="form-control">Spring AI에 대해 100자 이내로 설명해줘</textarea>
+        <span class="input-group-text">
+          <button type="button" class="btn btn-primary" onclick="handleSubmit()">제출</button>
+        </span>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>
