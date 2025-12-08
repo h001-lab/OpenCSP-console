@@ -1,0 +1,56 @@
+{
+	"Nav": {
+        "title": "오픈 콘솔",
+		"home": "홈",
+		"dashboard": "대시보드",
+		"components": "컴포넌트",
+		"announcements": "공지사항",
+		"admin": "관리자"
+	},
+	"Home": {
+		"title": "환영합니다!",
+		"description": "이것은 한국어 페이지입니다",
+        "sidebar": [
+			{ "label": "홈", "path": "/" }
+		]
+	},
+	"Admin": {
+		"title": "관리자",
+        "sidebar": [
+			{ "label": "관리자 페이지", "path": "/admin" },
+			{ "label": "유저 관리", "path": "/admin/users" },
+			{ "label": "시스템 설정", "path": "/admin/settings" },
+			{ "label": "모니터링", "path": "/admin/monitoring" }
+		],
+		"info": [
+			{
+				"label": "유저 관리",
+				"description": "사용자와 사용자의 권한, 역할을 관리합니다."
+			},
+			{
+				"label": "시스템 설정",
+				"description": "시스템의 전반적인 설정을 관리합니다."
+			},
+			{
+				"label": "모니터링",
+				"description": "시스템의 상태와 성능을 모니터링합니다."
+			}
+		],
+        "monitoring":{
+            "title":"모니터링"
+        }
+		
+	},
+	"Announcements": {
+		"title": "공지사항",
+		"sidebar": [{ "label": "홈", "path": "/announcements" }]
+	},
+	"Components": {
+		"title": "컴포넌트",
+		"sidebar": [{ "label": "컴포넌트 홈", "path": "/components" }]
+	},
+	"Dashboard": {
+		"title": "대시보드",
+		"sidebar": [{ "label": "대시보드 홈", "path": "/dashboard" }]
+	}
+}
