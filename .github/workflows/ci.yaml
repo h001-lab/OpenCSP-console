@@ -71,4 +71,15 @@ jobs:
           distribution: temurin
 
       - run: chmod +x ./gradlew
+      - name: Debug environment
+        run: |
+          echo "=== Environment Variables ==="
+          env | grep -i spring || echo "No SPRING_* env vars"
+          echo "=== Java Version ==="
+          java -version
+          echo "=== Gradle Version ==="
+          ./gradlew --version
+          echo "=== Test Profile Check ==="
+          ./gradlew test --tests OpenConsoleApplicationTests --info 2>&1 | grep -i "profile\|datasource\|h2" | head -20 || true
+      - run: ./gradlew test --info --stacktrace 2>&1 | tail -200 || ./gradlew test --info --stacktrace
       - run: ./gradlew build
