@@ -76,6 +76,7 @@ spring:
     driver-class-name: org.h2.Driver
     username: sa
     password: 
+
   jpa:
     hibernate:
       ddl-auto: create-drop
@@ -83,3 +84,11 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
+
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      # Gemini API를 사용하므로 base-url도 필요
+      chat:
+        base-url: ${SPRING_AI_OPENAI_CHAT_BASE_URL:https://generativelanguage.googleapis.com/v1beta/openai/}
+        completions-path: ${SPRING_AI_OPENAI_CHAT_COMPLETIONS_PATH:/chat/completions}
