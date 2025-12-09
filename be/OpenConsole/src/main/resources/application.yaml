@@ -1,0 +1,67 @@
+spring:
+  config:
+    # import: optional:dotenv:.env
+    import: optional:file:.env[.properties]
+
+  application:
+    name: OpenConsole
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mariadb://localhost:3306/fint}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+    driver-class-name: org.mariadb.jdbc.Driver
+
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 15MB
+
+  web:
+    resources:
+      cache:
+        cachecontrol:
+          no-cache: true
+          no-store: true
+          must-revalidate: true
+
+  output:
+    ansi:
+      enabled: ALWAYS
+
+  # Spring AI: Vertex AI / OpenAI(호환) 설정
+  ai:
+    # Vertex AI Gemini 설정 (gcloud 인증 필요)
+    vertex:
+      ai:
+        gemini:
+          project-id: ${SPRING_AI_VERTEX_PROJECT_ID:}
+          location: ${SPRING_AI_VERTEX_LOCATION:us-central1}
+          chat:
+            options:
+              model: ${SPRING_AI_VERTEX_CHAT_OPTIONS_MODEL:gemini-2.0-flash}
+              temperature: ${SPRING_AI_VERTEX_CHAT_OPTIONS_TEMPERATURE:0.5}
+
+    # OpenAI
+    openai:
+      api-key: ${SPRING_AI_OPENAI_API_KEY:}
+      chat:
+        base-url: ${SPRING_AI_OPENAI_CHAT_BASE_URL:https://generativelanguage.googleapis.com/v1beta/openai/}
+        completions-path: ${SPRING_AI_OPENAI_CHAT_COMPLETIONS_PATH:/chat/completions}
+        options:
+          model: ${SPRING_AI_OPENAI_CHAT_OPTIONS_MODEL:gemini-2.0-flash-lite}
+          temperature: ${SPRING_AI_OPENAI_CHAT_OPTIONS_TEMPERATURE:0.0}
+          max-tokens: ${SPRING_AI_OPENAI_CHAT_OPTIONS_MAX_TOKENS:1024}
+
+logging:
+  pattern:
+    console: "%clr(%-5level){green} %clr(%logger.%M\\(\\)){cyan}: %msg%n"
+  level:
+    org:
+      springframework:
+        ai:
+          chat:
+            client:
+              advisor: DEBUG
+
