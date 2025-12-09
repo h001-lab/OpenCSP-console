@@ -1,6 +1,5 @@
 spring:
   config:
-    # import: optional:dotenv:.env
     import: optional:file:.env[.properties]
 
   application:
@@ -65,3 +64,9 @@ logging:
             client:
               advisor: DEBUG
 
+---
+
+spring:
+  config:
+    activate:
+      on-profile: test
