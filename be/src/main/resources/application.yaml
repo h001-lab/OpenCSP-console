@@ -17,14 +17,6 @@ spring:
       max-file-size: 10MB
       max-request-size: 15MB
 
-  web:
-    resources:
-      cache:
-        cachecontrol:
-          no-cache: true
-          no-store: true
-          must-revalidate: true
-
   output:
     ansi:
       enabled: ALWAYS

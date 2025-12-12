@@ -38,9 +38,6 @@ dependencies {
     // implementation("org.springframework.boot:spring-boot-starter-security")
     // implementation("org.springframework.boot:spring-boot-starter-validation")
 
-    // Thymeleaf: 서버사이드 템플릿 엔진
-    implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
-
     // Spring AI
     implementation("org.springframework.ai:spring-ai-starter-model-openai") // OpenAI -> Gemini API 사용 가능 
     // implementation("org.springframework.ai:spring-ai-starter-model-vertex-ai-gemini") // Google Vertex AI Gemini -> GCP 필요
