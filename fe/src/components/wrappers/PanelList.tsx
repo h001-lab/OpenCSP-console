@@ -1,8 +1,8 @@
 "use client";
 
-import { Button } from "@/components/ui/Button/Button";
+
 import { PanelItem } from "@/components/types";
-import { ListPanel } from "@/components/ui/ListPanel/ListPanel";
+import { Button, ListPanel } from "@h001/ui";
 
 interface PanelListProps {
 	items: PanelItem[];

@@ -4,6 +4,7 @@
 @tailwind components;
 @tailwind utilities;
 
+
 :root {
 	--background: #ffffff;
 	--foreground: #171717;
@@ -27,4 +28,6 @@ body {
 	background: var(--background);
 	color: var(--foreground);
 	font-family: Arial, Helvetica, sans-serif;
+	font-size: var(--font-size);
+	line-height: var(--line-height);
 }
