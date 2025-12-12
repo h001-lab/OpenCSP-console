@@ -87,7 +87,7 @@ spring:
 
   ai:
     openai:
-      api-key: ${{ secrets.OPENAI_API_KEY }}
+      api-key: ${SPRING_AI_OPENAI_API_KEY:}
       # Gemini API를 사용하므로 base-url도 필요
       chat:
         base-url: ${SPRING_AI_OPENAI_CHAT_BASE_URL:https://generativelanguage.googleapis.com/v1beta/openai/}
