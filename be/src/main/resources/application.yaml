@@ -1,15 +1,25 @@
 spring:
   config:
-    import: optional:file:.env[.properties]
+    # .env 파일 로드 (프로젝트 루트 또는 be 디렉토리에서 찾음)
+    import: optional:file:.env[.properties],optional:file:be/.env[.properties]
 
   application:
     name: OpenConsole
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mariadb://localhost:3306/fint}
-    username: ${SPRING_DATASOURCE_USERNAME:root}
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD:}
-    driver-class-name: org.mariadb.jdbc.Driver
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER}
+
+  jpa:
+    hibernate:
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
+    show-sql: ${SPRING_JPA_SHOW_SQL:false}
+    properties:
+      hibernate:
+        dialect: ${SPRING_JPA_DIALECT}
+        format_sql: true
 
   servlet:
     multipart:

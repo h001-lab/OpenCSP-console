@@ -36,7 +36,7 @@ dependencies {
 
     // Security & Validation
     // implementation("org.springframework.boot:spring-boot-starter-security")
-    // implementation("org.springframework.boot:spring-boot-starter-validation")
+    implementation("org.springframework.boot:spring-boot-starter-validation")
 
     // Spring AI
     implementation("org.springframework.ai:spring-ai-starter-model-openai") // OpenAI -> Gemini API 사용 가능 
@@ -61,8 +61,10 @@ dependencies {
     testImplementation("com.h2database:h2")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
+    // SpringDoc이 HATEOAS를 공식적으로 연동하도록 돕는 모듈을 추가 (핵심!)
+    // implementation("org.springdoc:springdoc-openapi-starter-hateoas")
 	// Swagger-UI
-	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0")
+	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6")
 }
 
 dependencyManagement {
