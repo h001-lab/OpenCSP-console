@@ -34,9 +34,8 @@ export default function Layout({ children, navDomain, sidebarDomain }: LayoutPro
   const nav = useMsg(navDomain) as unknown as NavMessage;
   const components = useMsg("Components") as unknown as ComponentsMessage;
   const t = useMsg(sidebarDomain) as unknown as SidebarMessage;
-
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Rules of Hooks
   if (!nav || !t || !components) return null;
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
     <>
