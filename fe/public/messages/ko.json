@@ -1,9 +1,14 @@
 {
+	"Components":{
+		"Banner":{
+			"linkLabel":"공지사항 바로가기",
+			"storageKey":"banner"
+		}
+	},
 	"Nav": {
         "title": "오픈 콘솔",
 		"home": "홈",
 		"dashboard": "대시보드",
-		"components": "컴포넌트",
 		"announcements": "공지사항",
 		"admin": "관리자"
 	},
@@ -19,6 +24,7 @@
         "sidebar": [
 			{ "label": "관리자 페이지", "path": "/admin" },
 			{ "label": "유저 관리", "path": "/admin/users" },
+			{ "label": "노드 관리", "path": "/admin/nodes" },
 			{ "label": "시스템 설정", "path": "/admin/settings" },
 			{ "label": "모니터링", "path": "/admin/monitoring" }
 		],
@@ -37,17 +43,32 @@
 			}
 		],
         "monitoring":{
-            "title":"모니터링"
+            "title":"모니터링",
+			"sub_title_1":"로그 및 보고서"
+        },
+		"nodes":{
+			"title":"노드 관리"
+		},
+		"settings":{
+            "title":"시스템 설정",
+			"sub_title_1":"공지사항 & 배너 설정",
+			"tabs":{
+				"tab_1":{
+					"title":"공지사항 탭"
+				},
+				"tab_2":{
+					"title":"배너 탭"
+				}
+			}
+        },
+		"users":{
+            "title":"유저 관리"
         }
 		
 	},
 	"Announcements": {
 		"title": "공지사항",
 		"sidebar": [{ "label": "홈", "path": "/announcements" }]
-	},
-	"Components": {
-		"title": "컴포넌트",
-		"sidebar": [{ "label": "컴포넌트 홈", "path": "/components" }]
 	},
 	"Dashboard": {
 		"title": "대시보드",
