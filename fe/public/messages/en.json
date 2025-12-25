@@ -1,8 +1,8 @@
 {
-    "Components": {
-        "Banner": {
-            "linkLabel": "View Announcements",
-            "storageKey": "banner"
+    "Components":{
+        "Banner":{
+            "linkLabel":"Go to Announcements",
+            "storageKey":"banner"
         }
     },
     "Nav": {
@@ -14,15 +14,16 @@
     },
     "Home": {
         "title": "Welcome!",
-        "description": "This is the English page.",
+        "description": "This is the English page",
         "sidebar": [
-            { "label": "Home", "path": "/" }
+            { "label": "Home", "path": "/" },
+            { "label": "Instances", "path": "/instances" }
         ]
     },
     "Admin": {
         "title": "Admin",
         "sidebar": [
-            { "label": "Admin Overview", "path": "/admin" },
+            { "label": "Admin Page", "path": "/admin" },
             { "label": "User Management", "path": "/admin/users" },
             { "label": "Node Management", "path": "/admin/nodes" },
             { "label": "System Settings", "path": "/admin/settings" },
@@ -35,35 +36,36 @@
             },
             {
                 "label": "System Settings",
-                "description": "Configure overall system settings."
+                "description": "Manage overall system configurations."
             },
             {
                 "label": "Monitoring",
                 "description": "Monitor system status and performance."
             }
         ],
-        "monitoring": {
-            "title": "Monitoring",
-            "sub_title_1": "Logs & Reports"
+        "monitoring":{
+            "title":"Monitoring",
+            "sub_title_1":"Logs & Reports"
         },
-        "nodes": {
-            "title": "Node Management"
+        "nodes":{
+            "title":"Node Management"
         },
-        "settings": {
-            "title": "System Settings",
-            "sub_title_1": "Announcements & Banner Settings",
-            "tabs": {
-                "tab_1": {
-                    "title": "Announcements"
+        "settings":{
+            "title":"System Settings",
+            "sub_title_1":"Announcements & Banner Settings",
+            "tabs":{
+                "tab_1":{
+                    "title":"Announcements Tab"
                 },
-                "tab_2": {
-                    "title": "Banner"
+                "tab_2":{
+                    "title":"Banner Tab"
                 }
             }
         },
-        "users": {
-            "title": "User Management"
+        "users":{
+            "title":"User Management"
         }
+        
     },
     "Announcements": {
         "title": "Announcements",
@@ -72,5 +74,12 @@
     "Dashboard": {
         "title": "Dashboard",
         "sidebar": [{ "label": "Dashboard Home", "path": "/dashboard" }]
+    },
+    "Instances": {
+        "title": "Instances",
+        "sidebar": [
+            { "label": "Instances", "path": "/instances#instances" },
+            { "label": "Instance Types", "path": "/instances#settings" }
+        ]
     }
 }

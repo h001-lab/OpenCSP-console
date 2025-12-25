@@ -16,7 +16,8 @@
 		"title": "환영합니다!",
 		"description": "이것은 한국어 페이지입니다",
         "sidebar": [
-			{ "label": "홈", "path": "/" }
+			{ "label": "홈", "path": "/" },
+			{ "label": "인스턴스", "path": "/instances" }
 		]
 	},
 	"Admin": {
@@ -73,5 +74,12 @@
 	"Dashboard": {
 		"title": "대시보드",
 		"sidebar": [{ "label": "대시보드 홈", "path": "/dashboard" }]
+	},
+	"Instances": {
+		"title": "인스턴스",
+		"sidebar": [
+			{ "label": "인스턴스", "path": "/instances#instances" },
+			{ "label": "인스턴스 타입", "path": "/instances#settings" }
+		]
 	}
 }
