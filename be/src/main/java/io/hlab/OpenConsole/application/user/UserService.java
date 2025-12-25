@@ -1,12 +1,15 @@
 package io.hlab.OpenConsole.application.user;
 
 import io.hlab.OpenConsole.common.exception.ErrorCode;
+import io.hlab.OpenConsole.domain.user.IamProvider;
 import io.hlab.OpenConsole.domain.user.User;
 import io.hlab.OpenConsole.domain.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -15,12 +18,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
     private final UserRepository userRepository;
 
-    public Long createUser(String email, String name) {
+    public Long createUser(String email, String name, IamProvider provider, String subject) {
         if (userRepository.existsByEmail(email)) {
             throw ErrorCode.USER_ALREADY_EXISTS.toException();
         }
 
-        User user = User.create(email, name);
+        User user = User.create(email, name, provider, subject);
         User savedUser = userRepository.save(user);
         log.info("User created: id={}, email={}", savedUser.getId(), savedUser.getEmail());
         return savedUser.getId();
@@ -36,6 +39,28 @@ public class UserService {
     public User getUserByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> ErrorCode.USER_NOT_FOUND.toException());
+    }
+
+    @Transactional(readOnly = true)
+    public User getUserBySubject(IamProvider provider, String subject) {
+        return userRepository.findByProviderAndSubject(provider, subject)
+                .orElseThrow(() -> ErrorCode.USER_NOT_FOUND.toException());
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<User> findUserBySubject(IamProvider provider, String subject) {
+        return userRepository.findByProviderAndSubject(provider, subject);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean existsByEmail(String email) {
+        return userRepository.existsByEmail(email);
+    }
+
+    public User createUser(User user) {
+        User savedUser = userRepository.save(user);
+        log.info("User created: id={}, email={}, subject={}", savedUser.getId(), savedUser.getEmail(), savedUser.getSubject());
+        return savedUser;
     }
 
     public void updateUser(Long id, String name) {

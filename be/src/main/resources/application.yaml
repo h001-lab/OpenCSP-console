@@ -31,6 +31,27 @@ spring:
     ansi:
       enabled: ALWAYS
 
+
+  # security
+  security:
+    oauth2:
+      client:
+        registration:
+          zitadel: # registrationId
+            client-id: ${ZITADEL_CLIENT_ID}
+            client-secret: ${ZITADEL_CLIENT_SECRET}
+            scope:
+              - openid
+              - profile
+              - email
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/zitadel"
+            client-name: ZITADEL
+        provider:
+          zitadel:
+            issuer-uri: ${ZITADEL_ISSUER_URI}
+            user-name-attribute: sub # ID값으로 'sub'를 사용하겠다는 명시
+
   # Spring AI: Vertex AI / OpenAI(호환) 설정
   ai:
     # Vertex AI Gemini 설정 (gcloud 인증 필요)

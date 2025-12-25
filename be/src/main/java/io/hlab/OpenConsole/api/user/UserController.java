@@ -5,12 +5,16 @@ import io.hlab.OpenConsole.api.user.dto.UserResponse;
 import io.hlab.OpenConsole.api.user.dto.UserUpdateRequest;
 import io.hlab.OpenConsole.application.user.UserService;
 import io.hlab.OpenConsole.common.dto.ApiResponse;
+import io.hlab.OpenConsole.domain.user.IamProvider;
 import io.hlab.OpenConsole.domain.user.User;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @Slf4j
@@ -20,12 +24,28 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
     private final UserService userService;
 
+    @GetMapping("/api/me")
+    public ApiResponse<UserResponse> getMyInfo(@AuthenticationPrincipal OidcUser principal, HttpServletRequest httpRequest) {
+        if (principal == null) {
+            return ApiResponse.error("UNAUTHORIZED", "로그인되지 않았습니다.");
+        }
+        
+        // ZITADEL에서 넘겨준 실제 값들을 확인합니다.
+        Optional<User> user = userService.findUserBySubject(IamProvider.ZITADEL, principal.getSubject());
+        if (user.isEmpty()) {
+            return ApiResponse.error("USER_NOT_FOUND", "사용자를 찾을 수 없습니다.");
+        }
+        String baseUrl = getBaseUrl(httpRequest);
+        String resourcePath = getResourcePath(httpRequest);
+        return ApiResponse.success("사용자 정보를 조회했습니다.", UserResponse.from(user.get(), baseUrl, resourcePath));   
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<UserResponse> createUser(
             @RequestBody @Valid UserCreateRequest request,
             HttpServletRequest httpRequest) {
-        Long userId = userService.createUser(request.getEmail(), request.getName());
+        Long userId = userService.createUser(request.getEmail(), request.getName(), request.getProvider(), request.getSubject());
         User user = userService.getUser(userId);
         String baseUrl = getBaseUrl(httpRequest);
         String resourcePath = getResourcePath(httpRequest);

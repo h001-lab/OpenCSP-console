@@ -35,8 +35,11 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 
     // Security & Validation
-    // implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-validation")
+
+    // oauth2
+    implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
 
     // Spring AI
     implementation("org.springframework.ai:spring-ai-starter-model-openai") // OpenAI -> Gemini API 사용 가능 

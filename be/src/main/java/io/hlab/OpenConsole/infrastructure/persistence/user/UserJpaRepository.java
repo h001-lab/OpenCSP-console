@@ -1,5 +1,6 @@
 package io.hlab.OpenConsole.infrastructure.persistence.user;
 
+import io.hlab.OpenConsole.domain.user.IamProvider;
 import io.hlab.OpenConsole.domain.user.User;
 import io.hlab.OpenConsole.domain.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,11 @@ public class UserJpaRepository implements UserRepository {
     @Override
     public Optional<User> findByEmail(String email) {
         return springDataUserRepository.findByEmail(email);
+    }
+
+    @Override
+    public Optional<User> findByProviderAndSubject(IamProvider provider, String subject) {
+        return springDataUserRepository.findByProviderAndSubject(provider, subject);
     }
 
     @Override
