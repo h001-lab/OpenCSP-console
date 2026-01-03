@@ -2,8 +2,9 @@
 
 import Layout from "@/components/Layout/Layout";
 import { useMsg } from "@/providers/MessagesProvider";
-import { EnhancedTable } from "@h001/ui";
+import { Button, DenseTable, EnhancedTable, FormModal } from "@h001/ui";
 import { useEffect, useState } from "react";
+import { Column } from "@/components/types";
 
 interface InstancesPageMessage {
 	title: string;
@@ -30,10 +31,50 @@ const useHash = () => {
 	return hash;
 };
 
-const InstancesView = () => (
+interface DummyInstance {
+	name: string;
+	version: string;
+	arch: string;
+}
+
+const dummyInstanceColumns: Column<DummyInstance>[] = [
+	{ key: "name", label: "이미지 이름", width: "40%" },
+	{ key: "version", label: "버전", width: "30%" },
+	{ key: "arch", label: "아키텍처", width: "30%" },
+];
+
+const dummyInstanceData: DummyInstance[] = [
+	{ name: "Ubuntu Server", version: "22.04 LTS", arch: "x86_64" },
+	{ name: "CentOS Stream", version: "9", arch: "x86_64" },
+	{ name: "Rocky Linux", version: "9.3", arch: "arm64" },
+	{ name: "Debian", version: "12 (Bookworm)", arch: "x86_64" },
+	{ name: "Fedora Cloud", version: "39", arch: "x86_64" },
+];
+
+const InstancesView = ({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) => (
 	<div className="p-4 bg-gray-50 border border-blue-200 rounded">
+		<div className="flex justify-end p-4">
+			<Button variant="default" onClick={() => setOpen(true)}>
+				인스턴스 추가
+			</Button>
+			<FormModal
+				title="인스턴스 추가"
+				open={open}
+				onSubmit={() => setOpen(false)}
+				onCancel={() => setOpen(false)}
+				children={<div className="flex flex-col gap-4 items-center">
+					<DenseTable<DummyInstance> data={dummyInstanceData} columns={dummyInstanceColumns} />
+				</div>}
+			/>
+		</div>
 		<EnhancedTable
 			title="인스턴스 목록"
+			headCells={[
+				{ id: "name", label: "인스턴스 이름", numeric: false, disablePadding: false },
+				{ id: "status", label: "상태", numeric: false, disablePadding: false },
+				{ id: "type", label: "인스턴스 유형", numeric: false, disablePadding: false },
+				{ id: "ip", label: "IP 주소", numeric: false, disablePadding: false },
+			]}
 			rows={[
 				{ id: 1, name: "web-prod-01", status: "Running", type: "c5.xlarge", ip: "54.123.45.67" },
 				{ id: 2, name: "web-prod-02", status: "Running", type: "c5.xlarge", ip: "54.123.45.68" },
@@ -51,12 +92,6 @@ const InstancesView = () => (
 				{ id: 14, name: "test-env-01", status: "Terminated", type: "t2.micro", ip: "-" },
 				{ id: 15, name: "backup-server", status: "Running", type: "m5.large", ip: "10.0.5.20" },
 			]}
-			headCells={[
-				{ id: "name", label: "인스턴스 이름", numeric: false, disablePadding: false },
-				{ id: "status", label: "상태", numeric: false, disablePadding: false },
-				{ id: "type", label: "인스턴스 유형", numeric: false, disablePadding: false },
-				{ id: "ip", label: "IP 주소", numeric: false, disablePadding: false },
-			]}
 		/>
 	</div>
 );
@@ -69,6 +104,7 @@ const SettingsView = () => (
 );
 
 export default function Page() {
+	const [open, setOpen] = useState(false);
 	const t = useMsg("Instances") as unknown as InstancesPageMessage;
 	if (!t) return null;
 
@@ -79,7 +115,7 @@ export default function Page() {
 		<Layout navDomain="Nav" sidebarDomain="Instances">
 			<main className="p-6 gap-6">
 				<div className="mb-6">
-					{activeTab === "instances" && <InstancesView />}
+					{activeTab === "instances" && <InstancesView open={open} setOpen={setOpen} />}
 					{activeTab === "settings" && <SettingsView />}
 				</div>
 			</main>

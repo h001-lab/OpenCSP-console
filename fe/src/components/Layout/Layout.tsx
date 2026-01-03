@@ -1,6 +1,6 @@
 "use client";
 
-import { NotificationBanner, Sidebar, NavBar, Avatar, type SideBarItem } from "@h001/ui";
+import { NotificationBanner, Sidebar, NavBar, Avatar, SideBarItem } from "@h001/ui";
 import { Link, useMsg } from "@/providers/MessagesProvider";
 import { PropsWithChildren, useState } from "react";
 
@@ -52,14 +52,14 @@ export default function Layout({ children, navDomain, sidebarDomain }: LayoutPro
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <h2 className="font-medium text-lg">{nav.title}</h2>
+          <h2 className="font-medium text-lg">{nav.title as string}</h2>
         </div>}
         center={
           <>
-            <Link href="/">{nav.home}</Link>
-            <Link href="/dashboard">{nav.dashboard}</Link>
-            <Link href="/announcements">{nav.announcements}</Link>
-            <Link href="/admin">{nav.admin}</Link>
+            <Link href="/">{nav.home as string}</Link>
+            <Link href="/dashboard">{nav.dashboard as string}</Link>
+            <Link href="/announcements">{nav.announcements as string}</Link>
+            <Link href="/admin">{nav.admin as string}</Link>
           </>
         }
         right={<Avatar name="관리자" />}
