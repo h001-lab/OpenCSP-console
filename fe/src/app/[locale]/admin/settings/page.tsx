@@ -56,7 +56,7 @@ export default function Page() {
 										placeholder="공지 내용"
 									/>
 									<div className="gap-2 flex justify-end mt-3">
-										<Button variant="neutral">공지 등록</Button>
+										<Button variant="default">공지 등록</Button>
 									</div>
 								</div>
 							</Panel>
@@ -79,7 +79,7 @@ export default function Page() {
 										</div>
 
 										<div className="flex gap-2 justify-end ml-auto">
-											<Button variant="primary">배너 적용</Button>
+											<Button variant="default">배너 적용</Button>
 										</div>
 									</div>
 								</div>

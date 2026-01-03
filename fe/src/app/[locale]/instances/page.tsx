@@ -3,32 +3,24 @@
 import Layout from "@/components/Layout/Layout";
 import { useMsg } from "@/providers/MessagesProvider";
 import { Button, DenseTable, EnhancedTable, FormModal } from "@h001/ui";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Column } from "@/components/types";
 
 interface InstancesPageMessage {
 	title: string;
 }
 
+import { useSyncExternalStore } from "react";
+
 const useHash = () => {
-	const [hash, setHash] = useState("");
-
-	useEffect(() => {
-		const getHash = () => (typeof window !== "undefined" ? window.location.hash.replace("#", "") : "");
-		setHash(getHash());
-
-		const handleHashChange = () => {
-			setHash(getHash());
-		};
-
-		window.addEventListener("hashchange", handleHashChange);
-
-		return () => {
-			window.removeEventListener("hashchange", handleHashChange);
-		};
-	}, []);
-
-	return hash;
+	return useSyncExternalStore(
+		(callback) => {
+			window.addEventListener("hashchange", callback);
+			return () => window.removeEventListener("hashchange", callback);
+		},
+		() => window.location.hash.replace("#", ""),
+		() => ""
+	);
 };
 
 interface DummyInstance {
@@ -62,10 +54,11 @@ const InstancesView = ({ open, setOpen }: { open: boolean; setOpen: (open: boole
 				open={open}
 				onSubmit={() => setOpen(false)}
 				onCancel={() => setOpen(false)}
-				children={<div className="flex flex-col gap-4 items-center">
+			>
+				<div className="flex flex-col gap-4 items-center">
 					<DenseTable<DummyInstance> data={dummyInstanceData} columns={dummyInstanceColumns} />
-				</div>}
-			/>
+				</div>
+			</FormModal>
 		</div>
 		<EnhancedTable
 			title="인스턴스 목록"
@@ -105,10 +98,10 @@ const SettingsView = () => (
 
 export default function Page() {
 	const [open, setOpen] = useState(false);
+	const hash = useHash();
 	const t = useMsg("Instances") as unknown as InstancesPageMessage;
 	if (!t) return null;
 
-	const hash = useHash();
 	const activeTab = hash || "instances";
 
 	return (

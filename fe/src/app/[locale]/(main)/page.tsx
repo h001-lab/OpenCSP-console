@@ -14,12 +14,6 @@ const cards = Array.from({ length: 80 }).map((_, i) => ({
 	color: `hsl(${i * 40}, 70%, 50%)`, // 색상 자동 생성
 }));
 
-const images = Array.from({ length: 5 }).map((_, i) => ({
-	id: i,
-	src: `https://picsum.photos/300/200?random=${i}`,
-	alt: `Random Image ${i}`,
-}));
-
 export default function Page() {
 	const t = useMsg("Home") as unknown as MainPageMessage;
 	if (!t) return null;
