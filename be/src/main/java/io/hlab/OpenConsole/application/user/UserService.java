@@ -1,7 +1,6 @@
 package io.hlab.OpenConsole.application.user;
 
 import io.hlab.OpenConsole.common.exception.ErrorCode;
-import io.hlab.OpenConsole.domain.user.IamProvider;
 import io.hlab.OpenConsole.domain.user.User;
 import io.hlab.OpenConsole.domain.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,12 +17,19 @@ import java.util.Optional;
 public class UserService {
     private final UserRepository userRepository;
 
-    public Long createUser(String email, String name, IamProvider provider, String subject) {
+    /**
+     * 사용자 생성
+     * 
+     * @param email 이메일
+     * @param name 이름
+     * @return 생성된 사용자 ID
+     */
+    public Long createUser(String email, String name) {
         if (userRepository.existsByEmail(email)) {
             throw ErrorCode.USER_ALREADY_EXISTS.toException();
         }
 
-        User user = User.create(email, name, provider, subject);
+        User user = User.create(email, name);
         User savedUser = userRepository.save(user);
         log.info("User created: id={}, email={}", savedUser.getId(), savedUser.getEmail());
         return savedUser.getId();
@@ -42,14 +48,8 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public User getUserBySubject(IamProvider provider, String subject) {
-        return userRepository.findByProviderAndSubject(provider, subject)
-                .orElseThrow(() -> ErrorCode.USER_NOT_FOUND.toException());
-    }
-
-    @Transactional(readOnly = true)
-    public Optional<User> findUserBySubject(IamProvider provider, String subject) {
-        return userRepository.findByProviderAndSubject(provider, subject);
+    public Optional<User> findUserByEmail(String email) {
+        return userRepository.findByEmail(email);
     }
 
     @Transactional(readOnly = true)
@@ -57,9 +57,15 @@ public class UserService {
         return userRepository.existsByEmail(email);
     }
 
+    /**
+     * 사용자 생성 (엔티티 직접 저장)
+     * 
+     * @param user User 엔티티
+     * @return 저장된 User 엔티티
+     */
     public User createUser(User user) {
         User savedUser = userRepository.save(user);
-        log.info("User created: id={}, email={}, subject={}", savedUser.getId(), savedUser.getEmail(), savedUser.getSubject());
+        log.info("User created: id={}, email={}", savedUser.getId(), savedUser.getEmail());
         return savedUser;
     }
 

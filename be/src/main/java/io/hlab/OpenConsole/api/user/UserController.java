@@ -5,7 +5,6 @@ import io.hlab.OpenConsole.api.user.dto.UserResponse;
 import io.hlab.OpenConsole.api.user.dto.UserUpdateRequest;
 import io.hlab.OpenConsole.application.user.UserService;
 import io.hlab.OpenConsole.common.dto.ApiResponse;
-import io.hlab.OpenConsole.domain.user.IamProvider;
 import io.hlab.OpenConsole.domain.user.User;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -30,8 +29,9 @@ public class UserController {
             return ApiResponse.error("UNAUTHORIZED", "로그인되지 않았습니다.");
         }
         
-        // ZITADEL에서 넘겨준 실제 값들을 확인합니다.
-        Optional<User> user = userService.findUserBySubject(IamProvider.ZITADEL, principal.getSubject());
+        // Email로 사용자 찾기 (IAM이 SSOT이므로 email 사용)
+        String email = principal.getEmail();
+        Optional<User> user = userService.findUserByEmail(email);
         if (user.isEmpty()) {
             return ApiResponse.error("USER_NOT_FOUND", "사용자를 찾을 수 없습니다.");
         }
@@ -45,7 +45,7 @@ public class UserController {
     public ApiResponse<UserResponse> createUser(
             @RequestBody @Valid UserCreateRequest request,
             HttpServletRequest httpRequest) {
-        Long userId = userService.createUser(request.getEmail(), request.getName(), request.getProvider(), request.getSubject());
+        Long userId = userService.createUser(request.getEmail(), request.getName());
         User user = userService.getUser(userId);
         String baseUrl = getBaseUrl(httpRequest);
         String resourcePath = getResourcePath(httpRequest);
