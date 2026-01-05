@@ -9,6 +9,8 @@ public enum ErrorCode {
     USER_NOT_FOUND("USER_NOT_FOUND", "사용자를 찾을 수 없습니다.", 404),
     USER_ALREADY_EXISTS("USER_ALREADY_EXISTS", "이미 존재하는 사용자입니다.", 409),
     INVALID_INPUT("INVALID_INPUT", "잘못된 입력입니다.", 400),
+    UNAUTHORIZED("UNAUTHORIZED", "인증이 필요합니다.", 401),
+    FORBIDDEN("FORBIDDEN", "접근 권한이 없습니다.", 403),
     INTERNAL_SERVER_ERROR("INTERNAL_SERVER_ERROR", "서버 내부 오류가 발생했습니다.", 500);
 
     private final String code;

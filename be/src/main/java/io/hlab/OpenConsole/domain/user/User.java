@@ -20,13 +20,6 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String subject; // IAM에서 넘겨준 고유 식별자 (sub)
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private IamProvider provider;
-
     @Column(nullable = false, unique = true, length = 100)
     private String email;
 
@@ -50,21 +43,19 @@ public class User {
         updatedAt = LocalDateTime.now();
     }
 
-    public static User create(String email, String name, IamProvider provider, String subject) {
+    /**
+     * 사용자 생성
+     * IAM 정보(subject, provider)는 저장하지 않음 (IAM이 SSOT)
+     * 
+     * @param email 이메일
+     * @param name 이름
+     * @return User 엔티티
+     */
+    public static User create(String email, String name) {
         return User.builder()
                 .email(email)
                 .name(name)
-                .provider(provider)
-                .subject(subject)
                 .build();
-    }
-
-    public void setSubject(String subject) {
-        this.subject = subject;
-    }
-
-    public void setProvider(IamProvider provider) {
-        this.provider = provider;
     }
 
     public void setEmail(String email) {

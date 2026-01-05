@@ -9,8 +9,6 @@ public interface UserRepository {
 
     Optional<User> findByEmail(String email);
 
-    Optional<User> findByProviderAndSubject(IamProvider provider, String subject);
-
     boolean existsByEmail(String email);
 
     void deleteById(Long id);
