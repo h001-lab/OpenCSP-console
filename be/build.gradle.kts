@@ -40,6 +40,7 @@ dependencies {
 
     // oauth2
     implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
+    implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server") // JWT 검증용
 
     // Spring AI
     implementation("org.springframework.ai:spring-ai-starter-model-openai") // OpenAI -> Gemini API 사용 가능 

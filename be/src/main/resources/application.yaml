@@ -35,6 +35,7 @@ spring:
   # security
   security:
     oauth2:
+      # OAuth2 Client: 로그인 플로우 (FE에서 리다이렉트)
       client:
         registration:
           zitadel: # registrationId
@@ -44,6 +45,13 @@ spring:
               - openid
               - profile
               - email
+              # Zitadel Project role을 scope로 요청
+              # 형식: urn:zitadel:iam:org:project:role:{roleName}
+              # 또는 Project ID를 사용한 형식 (실제 Zitadel 설정에 맞게 조정 필요)
+              - urn:zitadel:iam:org:project:role:admin
+              - urn:zitadel:iam:org:project:role:userA
+              - urn:zitadel:iam:org:project:role:userB
+              - urn:zitadel:iam:org:project:role:userC
             authorization-grant-type: authorization_code
             redirect-uri: "{baseUrl}/login/oauth2/code/zitadel"
             client-name: ZITADEL
@@ -51,6 +59,12 @@ spring:
           zitadel:
             issuer-uri: ${ZITADEL_ISSUER_URI}
             user-name-attribute: sub # ID값으로 'sub'를 사용하겠다는 명시
+      # OAuth2 Resource Server: JWT 토큰 검증 (API 요청 시)
+      resourceserver:
+        jwt:
+          issuer-uri: ${ZITADEL_ISSUER_URI} # JWKS 엔드포인트 자동 감지
+          # JWT에서 role을 추출하기 위한 클레임 경로 설정
+          # Zitadel의 경우 role은 보통 "urn:zitadel:iam:org:project:roles" 또는 "roles" 클레임에 있음
 
   # Spring AI: Vertex AI / OpenAI(호환) 설정
   ai:
@@ -80,6 +94,13 @@ logging:
   pattern:
     console: "%clr(%-5level){green} %clr(%logger.%M\\(\\)){cyan}: %msg%n"
   level:
+    io:
+      hlab:
+        OpenConsole:
+          infrastructure:
+            security: DEBUG  # JWT role 추출 디버깅용
+            iam:
+              zitadel: DEBUG  # Zitadel API 호출 디버깅용
     org:
       springframework:
         ai:
@@ -87,6 +108,11 @@ logging:
             client:
               advisor: DEBUG
 
+zitadel:
+  domain: ${ZITADEL_DOMAIN}
+  org-id: ${ZITADEL_ORG_ID}
+  project-id: ${ZITADEL_PROJECT_ID}
+  api-token: ${ZITADEL_SERVICE_TOKEN}
 ---
 
 spring:
@@ -107,6 +133,14 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
+
+  # 테스트 환경에서는 OAuth2 Resource Server를 모킹
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # 테스트용 가짜 issuer-uri (실제로는 모킹됨)
+          issuer-uri: http://localhost:8080/.well-known/jwks.json
 
   ai:
     openai:
