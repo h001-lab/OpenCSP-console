@@ -4,7 +4,6 @@ import io.hlab.OpenConsole.api.role.dto.RoleAssignRequest;
 import io.hlab.OpenConsole.api.role.dto.RoleResponse;
 import io.hlab.OpenConsole.application.role.RoleService;
 import io.hlab.OpenConsole.common.dto.ApiResponse;
-import io.hlab.OpenConsole.infrastructure.iam.IamException;
 import io.hlab.OpenConsole.infrastructure.iam.IamRole;
 import io.hlab.OpenConsole.infrastructure.security.JwtUtils;
 import jakarta.servlet.http.HttpServletRequest;
@@ -40,13 +39,8 @@ public class RoleController {
     public ApiResponse<Void> assignRole(
             @RequestBody @Valid RoleAssignRequest request,
             HttpServletRequest httpRequest) {
-        try {
-            roleService.assignRoles(request.getEmail(), request.getRoles());
-            return ApiResponse.success("Role이 부여되었습니다.", null);
-        } catch (IamException e) {
-            log.error("Role 부여 실패: email={}, roles={}", request.getEmail(), request.getRoles(), e);
-            return ApiResponse.error("ROLE_ASSIGN_FAILED", "Role 부여에 실패했습니다: " + e.getMessage());
-        }
+        roleService.assignRoles(request.getEmail(), request.getRoles());
+        return ApiResponse.success("Role이 부여되었습니다.", null);
     }
 
     /**
@@ -59,13 +53,8 @@ public class RoleController {
     public ApiResponse<Void> removeRole(
             @RequestParam @jakarta.validation.constraints.Email String email,
             @RequestParam IamRole role) {
-        try {
-            roleService.removeRole(email, role);
-            return ApiResponse.success("Role이 제거되었습니다.", null);
-        } catch (IamException e) {
-            log.error("Role 제거 실패: email={}, role={}", email, role, e);
-            return ApiResponse.error("ROLE_REMOVE_FAILED", "Role 제거에 실패했습니다: " + e.getMessage());
-        }
+        roleService.removeRole(email, role);
+        return ApiResponse.success("Role이 제거되었습니다.", null);
     }
 
     /**
@@ -77,14 +66,9 @@ public class RoleController {
     public ApiResponse<RoleResponse> getUserRoles(
             @RequestParam @jakarta.validation.constraints.Email String email,
             HttpServletRequest httpRequest) {
-        try {
-            List<IamRole> roles = roleService.getUserRoles(email);
-            RoleResponse response = RoleResponse.of(email, roles);
-            return ApiResponse.success(response);
-        } catch (IamException e) {
-            log.error("Role 조회 실패: email={}", email, e);
-            return ApiResponse.error("ROLE_QUERY_FAILED", "Role 조회에 실패했습니다: " + e.getMessage());
-        }
+        List<IamRole> roles = roleService.getUserRoles(email);
+        RoleResponse response = RoleResponse.of(email, roles);
+        return ApiResponse.success(response);
     }
 
     /**

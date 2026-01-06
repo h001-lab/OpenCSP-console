@@ -1,6 +1,7 @@
 package io.hlab.OpenConsole.common.exception;
 
 import io.hlab.OpenConsole.common.dto.ApiResponse;
+import io.hlab.OpenConsole.infrastructure.iam.IamException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +24,16 @@ public class GlobalExceptionHandler {
         log.warn("BusinessException: {} - {}", e.getErrorCode(), e.getMessage());
         ApiResponse<Object> response = ApiResponse.error(e.getErrorCode(), e.getMessage());
         return ResponseEntity.status(e.getStatus()).body(response);
+    }
+
+    @ExceptionHandler(IamException.class)
+    public ResponseEntity<ApiResponse<Object>> handleIamException(IamException e) {
+        log.error("IAM 오류 발생: {}", e.getMessage(), e);
+        ApiResponse<Object> response = ApiResponse.error(
+                ErrorCode.IAM_ERROR.getCode(),
+                e.getMessage()
+        );
+        return ResponseEntity.status(ErrorCode.IAM_ERROR.getStatus()).body(response);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

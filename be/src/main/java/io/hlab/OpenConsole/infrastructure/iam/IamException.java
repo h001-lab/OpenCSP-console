@@ -10,8 +10,10 @@ package io.hlab.OpenConsole.infrastructure.iam;
  * </p>
  * <ul>
  *   <li><b>Infrastructure 레이어</b>: IamException을 catch하여 로깅 없이 그대로 전파합니다.
- *       로깅은 상위 레이어(Controller)에서 수행하여 중복 로깅을 방지합니다.</li>
- *   <li><b>API 레이어</b>: IamException을 catch하여 로깅하고 사용자에게 적절한 에러 응답을 반환합니다.</li>
+ *       로깅은 전역 예외 핸들러에서 수행하여 중복 로깅을 방지합니다.</li>
+ *   <li><b>Application 레이어</b>: IamException을 그대로 전파합니다.</li>
+ *   <li><b>API 레이어</b>: IamException을 처리하지 않고 그대로 전파합니다.
+ *       전역 예외 핸들러({@link io.hlab.OpenConsole.common.exception.GlobalExceptionHandler})에서 처리됩니다.</li>
  *   <li><b>예상치 못한 예외</b>: Infrastructure 레이어에서 Exception을 catch하여 로깅하고
  *       IamException으로 래핑하여 전파합니다.</li>
  * </ul>
@@ -30,12 +32,8 @@ package io.hlab.OpenConsole.infrastructure.iam;
  * }
  * 
  * // API 레이어 (RoleController)
- * try {
- *     roleService.assignRole(email, role);
- * } catch (IamException e) {
- *     log.error("Role 부여 실패", e);  // 여기서 로깅
- *     return ApiResponse.error("ROLE_ASSIGN_FAILED", e.getMessage());
- * }
+ * // try-catch 불필요, GlobalExceptionHandler에서 처리
+ * roleService.assignRole(email, role);
  * }</pre>
  * </p>
  */
