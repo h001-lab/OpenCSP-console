@@ -35,6 +35,83 @@ JPA, Querydsl, PostgreSQL 사용을 기본 가정하되, 최대한 DB 벤더 및
 - `…domain.user`, `…domain.order`  
 - `…api.user`, `…api.order` 등
 
+### 2.1.1 기능별 독립 패키지 구조 (Feature-based Package Structure)
+
+여러 기능이 독립적으로 관리되어야 하거나, 기능별로 완전히 분리된 모듈로 구성하고 싶을 때는 기능 단위로 상위 패키지를 구성할 수 있다.
+
+**구조 예시:**
+
+```
+io.hlab.OpenConsole.example/
+├── order/                        # 주문 기능
+│   ├── api/                      # ① External Interface
+│   │   ├── dto/
+│   │   │   ├── OrderRequestDTO.java
+│   │   │   └── OrderResponseDTO.java
+│   │   ├── OrderController.java
+│   │   └── OrderApiMapper.java
+│   ├── application/              # ② User Sequence
+│   │   └── OrderService.java
+│   ├── domain/                    # ③ Core Business Logic
+│   │   ├── Order.java
+│   │   ├── OrderStatus.java
+│   │   ├── OrderRepository.java
+│   │   └── DiscountService.java
+│   └── infrastructure/           # ④ Technical Implementation
+│       ├── JpaOrderRepository.java
+│       ├── SpringDataOrderRepository.java
+│       └── KakaoPaymentClient.java
+│
+└── reservation/                   # 예약 기능
+    ├── api/
+    │   ├── dto/
+    │   ├── ReservationController.java
+    ├── application/
+    │   └── ReservationService.java
+    ├── domain/
+    │   ├── Reservation.java
+    │   ├── ReservationStatus.java
+    │   └── ReservationRepository.java
+    └── infrastructure/
+        ├── JpaReservationRepository.java
+        └── SpringDataReservationRepository.java
+```
+
+**이 구조의 특징:**
+
+1. **기능별 독립성**: 각 기능(`order`, `reservation`)이 독립적인 레이어 구조를 가진다.
+2. **일관된 레이어 구조**: 모든 기능이 동일한 레이어 구조(`api`, `application`, `domain`, `infrastructure`)를 따른다.
+3. **명확한 책임 분리**: 각 레이어의 역할이 명확히 구분된다.
+4. **확장성**: 새로운 기능 추가 시 동일한 패턴을 따르면 된다.
+
+**사용 시기:**
+
+- 여러 독립적인 비즈니스 기능이 존재할 때
+- 기능별로 완전히 분리된 모듈로 관리하고 싶을 때
+- 각 기능이 독립적으로 테스트되고 배포되어야 할 때
+- 예시 코드나 학습용 구조를 만들 때
+
+**레이어별 역할:**
+
+- **api (External Interface)**: 외부 시스템(브라우저, 모바일 앱)과 가장 먼저 만나는 접점
+  - `Controller`: HTTP 요청을 받고 응답을 반환
+  - `DTO`: 화면에서 보내는 데이터 양식과 클라이언트에게 보여줄 데이터 양식
+  - `ApiMapper` (선택): DTO를 내부에서 쓰는 객체로 변환하거나 그 반대 역할
+
+- **application (User Sequence)**: 사용자가 요청한 "시나리오"를 순서대로 실행 (데이터의 흐름 제어)
+  - `Service` (또는 `UseCase`): 리포지토리에서 정보 조회 → 도메인 모델 생성 → 도메인 서비스 호출 → 리포지토리에 저장 → 이벤트 발행 등
+
+- **domain (Core Business Logic)**: 가장 중요한 비즈니스 규칙이 모여 있는 곳 (기술에 의존하지 않는 순수 자바 코드 중심)
+  - `Entity`: 상태를 가지고 있고, 핵심 로직을 직접 수행 (`cancel()`, `calculateTotal()` 등)
+  - `Value Object`: 값 객체 (예: `OrderStatus` Enum)
+  - `Repository` (인터페이스): "저장/조회한다"는 추상적인 약속
+  - `Domain Service`: 여러 엔티티가 협력해야 하거나 엔티티에 넣기 비대한 로직을 처리
+
+- **infrastructure (Technical Implementation)**: 도메인과 애플리케이션 계층에서 선언한 약속들을 실제로 구현하는 기술적인 영역
+  - `JpaRepository`: domain에 있는 Repository 인터페이스를 실제로 JPA를 사용하여 구현
+  - `ExternalClient`: 외부 API와의 실제 통신 로직 (예: `KakaoPaymentClient`)
+  - `EventPublisher`: 메시지 큐에 이벤트를 발행하는 실제 기술 구현체
+
 ### 2.2 레이어 역할
 
 - **Controller (api)**: HTTP 요청/응답 변환, 검증(@Valid), 인증/인가 처리 위임.
