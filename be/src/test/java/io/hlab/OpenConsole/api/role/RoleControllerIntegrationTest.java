@@ -54,6 +54,9 @@ class RoleControllerIntegrationTest {
     @MockBean
     private io.hlab.OpenConsole.infrastructure.security.JwtUtils jwtUtils;
 
+    @MockBean
+    private io.hlab.OpenConsole.infrastructure.iam.IamClient iamClient;
+
     private static final String TEST_EMAIL = "test@example.com";
     private Jwt jwtWithAdminRole;
 

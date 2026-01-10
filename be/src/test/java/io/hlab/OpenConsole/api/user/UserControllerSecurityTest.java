@@ -4,9 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.hlab.OpenConsole.api.user.dto.UserCreateRequest;
 import io.hlab.OpenConsole.domain.user.User;
 import io.hlab.OpenConsole.domain.user.UserRepository;
+import io.hlab.OpenConsole.infrastructure.iam.IamClient;
 import io.hlab.OpenConsole.infrastructure.iam.IamRole;
-import io.hlab.OpenConsole.infrastructure.iam.zitadel.client.ZitadelAuthExecutor;
-import io.hlab.OpenConsole.infrastructure.iam.zitadel.client.ZitadelUserExecutor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Disabled;
@@ -54,10 +53,7 @@ class UserControllerSecurityTest {
     private UserRepository userRepository;
 
     @MockBean
-    private ZitadelAuthExecutor zitadelAuthExecutor;
-
-    @MockBean
-    private ZitadelUserExecutor zitadelUserExecutor;
+    private IamClient iamClient;
 
     private Jwt jwtWithAdminRole;
     private Jwt jwtWithUserARole;

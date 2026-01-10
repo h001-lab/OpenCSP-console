@@ -40,6 +40,11 @@ public class ZitadelAuthExecutor {
      * WebClient 인스턴스 생성 (공통 헤더 설정)
      */
     private WebClient createWebClient() {
+        // domain이 null이거나 빈 문자열인 경우 처리
+        if (zitadelDomain == null || zitadelDomain.isBlank()) {
+            throw new IllegalStateException("zitadel.domain이 설정되지 않았습니다. application.yaml 또는 환경 변수를 확인하세요.");
+        }
+        
         // domain에 프로토콜이 이미 포함되어 있으면 그대로 사용, 없으면 https:// 추가
         String baseUrl = zitadelDomain.startsWith("http://") || zitadelDomain.startsWith("https://")
                 ? zitadelDomain

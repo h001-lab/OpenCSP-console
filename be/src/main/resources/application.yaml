@@ -7,10 +7,10 @@ spring:
     name: OpenConsole
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL}
-    username: ${SPRING_DATASOURCE_USERNAME}
+    url: ${SPRING_DATASOURCE_URL:}
+    username: ${SPRING_DATASOURCE_USERNAME:}
     password: ${SPRING_DATASOURCE_PASSWORD:}
-    driver-class-name: ${SPRING_DATASOURCE_DRIVER}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER:}
 
   jpa:
     hibernate:
@@ -18,7 +18,7 @@ spring:
     show-sql: ${SPRING_JPA_SHOW_SQL:false}
     properties:
       hibernate:
-        dialect: ${SPRING_JPA_DIALECT}
+        dialect: ${SPRING_JPA_DIALECT:}
         format_sql: true
 
   servlet:
