@@ -2,10 +2,10 @@
 
 import Layout from "@/components/Layout/Layout";
 import { useAutoMsg } from "@/providers/MessagesProvider";
-import { UsersPageMessage } from "../types";
+import { NodesPageMessage } from "../types";
 
 export default function Page() {
-    const t = useAutoMsg() as unknown as UsersPageMessage;
+    const t = useAutoMsg() as unknown as NodesPageMessage;
     if (!t) return null;
 
     return (
@@ -13,7 +13,7 @@ export default function Page() {
             <main className="p-3 gap-3">
                 <div className="mb-6">
                     <h2 className="text-lg font-semibold text-gray-700 mb-2">
-                        {t?.users.title || "Users"}
+                        {t?.nodes.title || "Nodes"}
                     </h2>
                     <hr />
                 </div>

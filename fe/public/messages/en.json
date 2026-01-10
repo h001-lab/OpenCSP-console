@@ -1,56 +1,85 @@
 {
-    "Nav": {
-        "title": "OpenConsole",
-		"home": "Home",
-		"dashboard": "Dashboard",
-		"components": "Components",
-		"announcements": "Announcements",
-		"admin": "Admin"
-	},
-	"Home": {
-		"title": "Home",
-		"description": "This is the English page",
-        "sidebar": [
-			{ "label": "Home", "path": "/" }
-		]
-	},
-	"Admin": {
-		"title": "Admin",
-        "sidebar": [
-			{ "label": "Information", "path": "/admin" },
-			{ "label": "Users management", "path": "/admin/users" },
-			{ "label": "System settings", "path": "/admin/settings" },
-			{ "label": "Monitoring", "path": "/admin/monitoring" }
-		],
-		"info": [
-			{
-				"label": "User Management",
-				"description": "Manage users, their roles, and permissions."
-			},
-			{
-				"label": "System Settings",
-				"description": "Configure and manage system-wide settings."
-			},
-			{
-				"label": "Monitoring",
-				"description": "Monitor system status and performance."
-			}
-		],
-        "monitoring":{
-            "title":"Mointoring"
+    "Components":{
+        "Banner":{
+            "linkLabel":"Go to Announcements",
+            "storageKey":"banner"
         }
-		
-	},
-	"Announcements": {
-		"title": "Announcements",
-		"sidebar": [{ "label": "Home", "path": "/announcements" }]
-	},
-	"Components": {
-		"title": "Components",
-		"sidebar": [{ "label": "Components Home", "path": "/components" }]
-	},
-	"Dashboard": {
-		"title": "Dashboard",
-		"sidebar": [{ "label": "Dashboard Home", "path": "/dashboard" }]
-	}
+    },
+    "Nav": {
+        "title": "Open Console",
+        "home": "Home",
+        "dashboard": "Dashboard",
+        "announcements": "Announcements",
+        "admin": "Admin"
+    },
+    "Home": {
+        "title": "Welcome!",
+        "description": "This is the English page",
+        "sidebar": [
+            { "label": "Home", "path": "/" },
+            { "label": "Instances", "path": "/instances" }
+        ]
+    },
+    "Admin": {
+        "title": "Admin",
+        "sidebar": [
+            { "label": "Admin Page", "path": "/admin" },
+            { "label": "User Management", "path": "/admin/users" },
+            { "label": "Node Management", "path": "/admin/nodes" },
+            { "label": "System Settings", "path": "/admin/settings" },
+            { "label": "Monitoring", "path": "/admin/monitoring" }
+        ],
+        "info": [
+            {
+                "label": "User Management",
+                "description": "Manage users, permissions, and roles."
+            },
+            {
+                "label": "System Settings",
+                "description": "Manage overall system configurations."
+            },
+            {
+                "label": "Monitoring",
+                "description": "Monitor system status and performance."
+            }
+        ],
+        "monitoring":{
+            "title":"Monitoring",
+            "sub_title_1":"Logs & Reports"
+        },
+        "nodes":{
+            "title":"Node Management"
+        },
+        "settings":{
+            "title":"System Settings",
+            "sub_title_1":"Announcements & Banner Settings",
+            "tabs":{
+                "tab_1":{
+                    "title":"Announcements Tab"
+                },
+                "tab_2":{
+                    "title":"Banner Tab"
+                }
+            }
+        },
+        "users":{
+            "title":"User Management"
+        }
+        
+    },
+    "Announcements": {
+        "title": "Announcements",
+        "sidebar": [{ "label": "Home", "path": "/announcements" }]
+    },
+    "Dashboard": {
+        "title": "Dashboard",
+        "sidebar": [{ "label": "Dashboard Home", "path": "/dashboard" }]
+    },
+    "Instances": {
+        "title": "Instances",
+        "sidebar": [
+            { "label": "Instances", "path": "/instances#instances" },
+            { "label": "Instance Types", "path": "/instances#settings" }
+        ]
+    }
 }
