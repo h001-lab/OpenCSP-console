@@ -136,12 +136,15 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
 
-  # 테스트 환경에서는 OAuth2 Resource Server를 모킹
+  # 테스트 환경에서는 OAuth2 Client/Resource Server 설정
   security:
     oauth2:
+      # OAuth2 Client: 테스트 환경에서는 자동 설정을 비활성화 (실제 로그인 플로우 테스트 불필요)
+      client:
+        registration: {}  # 빈 객체로 설정하여 OAuth2 Client 자동 설정 비활성화
+      # OAuth2 Resource Server: 테스트용 가짜 issuer-uri (실제로는 모킹됨)
       resourceserver:
         jwt:
-          # 테스트용 가짜 issuer-uri (실제로는 모킹됨)
           issuer-uri: http://localhost:8080/.well-known/jwks.json
 
   ai:
