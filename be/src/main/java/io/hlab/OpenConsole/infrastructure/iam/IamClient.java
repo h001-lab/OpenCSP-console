@@ -6,7 +6,41 @@ import java.util.List;
  * IAM 클라이언트 인터페이스
  * IAM 시스템에 role을 부여하거나 관리하는 기능을 추상화
  * 
- * 구현체는 각 IAM 솔루션별로 제공됨 (예: ZitadelClient, KeycloakClient)
+ * <h3>구현체</h3>
+ * <ul>
+ *   <li>{@link io.hlab.OpenConsole.infrastructure.iam.zitadel.ZitadelClient}: Zitadel 구현체</li>
+ * </ul>
+ * 
+ * <h3>사용 예시</h3>
+ * <pre>{@code
+ * // Role 부여
+ * iamClient.assignRole(userId, IamRole.ADMIN);
+ * 
+ * // 여러 Role 부여
+ * iamClient.assignRoles(userId, List.of(IamRole.ADMIN, IamRole.USER_A));
+ * 
+ * // Role 제거
+ * iamClient.removeRole(userId, IamRole.USER_A);
+ * 
+ * // Role 조회
+ * List<IamRole> roles = iamClient.getUserRoles(userId);
+ * 
+ * // Email → Subject 변환
+ * String subject = iamClient.getUserSubjectByEmail(email);
+ * 
+ * // Subject → Email 변환
+ * String email = iamClient.getUserEmailBySubject(subject);
+ * }</pre>
+ * 
+ * <h3>향후 확장 방안</h3>
+ * <ul>
+ *   <li>Organization 기능 추가 시: {@code IamOrganizationClient} 인터페이스로 분리 예정</li>
+ *   <li>블랙리스트 기능: {@code IamTokenBlacklistClient} 인터페이스로 분리 예정</li>
+ * </ul>
+ * 
+ * @see io.hlab.OpenConsole.infrastructure.iam.zitadel.ZitadelClient
+ * @see io.hlab.OpenConsole.infrastructure.iam.IamException
+ * @see io.hlab.OpenConsole.infrastructure.iam.IamRole
  */
 public interface IamClient {
 

@@ -149,3 +149,16 @@ spring:
       chat:
         base-url: ${SPRING_AI_OPENAI_CHAT_BASE_URL:https://generativelanguage.googleapis.com/v1beta/openai/}
         completions-path: ${SPRING_AI_OPENAI_CHAT_COMPLETIONS_PATH:/chat/completions}
+
+# 테스트용 Zitadel 설정 (실제 서버 없이 테스트)
+zitadel:
+  domain: http://localhost:9999
+  org-id: test-org-id
+  project-id: test-project-id
+  api-token: test-api-token
+
+logging:
+  level:
+    io.hlab.OpenConsole: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.security: DEBUG

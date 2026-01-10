@@ -48,7 +48,6 @@ public class RoleController {
      * ADMIN 권한 필요
      */
     @DeleteMapping
-    @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<Void> removeRole(
             @RequestParam @jakarta.validation.constraints.Email String email,

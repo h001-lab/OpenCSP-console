@@ -18,5 +18,14 @@ public class RoleAssignRequest {
 
     @NotEmpty(message = "Role 목록은 필수입니다.")
     private List<IamRole> roles;
+
+    // 테스트 및 JSON 역직렬화를 위한 setter
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public void setRoles(List<IamRole> roles) {
+        this.roles = roles;
+    }
 }
 
