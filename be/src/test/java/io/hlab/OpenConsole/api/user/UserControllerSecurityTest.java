@@ -5,6 +5,8 @@ import io.hlab.OpenConsole.api.user.dto.UserCreateRequest;
 import io.hlab.OpenConsole.domain.user.User;
 import io.hlab.OpenConsole.domain.user.UserRepository;
 import io.hlab.OpenConsole.infrastructure.iam.IamRole;
+import io.hlab.OpenConsole.infrastructure.iam.zitadel.client.ZitadelAuthExecutor;
+import io.hlab.OpenConsole.infrastructure.iam.zitadel.client.ZitadelUserExecutor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Disabled;
@@ -12,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -31,6 +34,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * UserController의 Security 테스트
  * JWT 토큰 기반 인증 및 Role 기반 권한 체크 테스트
+ * 
+ * <p>Zitadel 관련 Executor는 모킹하여 실제 API 호출을 방지합니다.
+ * 테스트 환경에서는 실제 Zitadel 서버가 없으므로 모킹이 필요합니다.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -46,6 +52,12 @@ class UserControllerSecurityTest {
 
     @Autowired
     private UserRepository userRepository;
+
+    @MockBean
+    private ZitadelAuthExecutor zitadelAuthExecutor;
+
+    @MockBean
+    private ZitadelUserExecutor zitadelUserExecutor;
 
     private Jwt jwtWithAdminRole;
     private Jwt jwtWithUserARole;

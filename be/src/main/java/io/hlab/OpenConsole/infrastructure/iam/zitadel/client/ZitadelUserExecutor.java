@@ -36,8 +36,13 @@ public class ZitadelUserExecutor {
      * WebClient 인스턴스 생성 (공통 헤더 설정)
      */
     private WebClient createWebClient() {
+        // domain에 프로토콜이 이미 포함되어 있으면 그대로 사용, 없으면 https:// 추가
+        String baseUrl = zitadelDomain.startsWith("http://") || zitadelDomain.startsWith("https://")
+                ? zitadelDomain
+                : "https://" + zitadelDomain;
+        
         return webClientBuilder
-                .baseUrl("https://" + zitadelDomain)
+                .baseUrl(baseUrl)
                 .defaultHeader("Authorization", "Bearer " + apiToken)
                 .defaultHeader("Content-Type", "application/json")
                 .defaultHeader("Connect-Protocol-Version", "1")

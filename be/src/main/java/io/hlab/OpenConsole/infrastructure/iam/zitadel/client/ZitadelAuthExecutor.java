@@ -14,6 +14,8 @@ import java.util.List;
 /**
  * Zitadel Authorization v2 API 실행자
  * Authorization 관련 API 호출만 담당
+ * 
+ * <p>테스트 환경에서는 실제 Zitadel 서버가 없으므로 모킹하여 사용합니다.
  */
 @Slf4j
 @Component
@@ -38,8 +40,13 @@ public class ZitadelAuthExecutor {
      * WebClient 인스턴스 생성 (공통 헤더 설정)
      */
     private WebClient createWebClient() {
+        // domain에 프로토콜이 이미 포함되어 있으면 그대로 사용, 없으면 https:// 추가
+        String baseUrl = zitadelDomain.startsWith("http://") || zitadelDomain.startsWith("https://")
+                ? zitadelDomain
+                : "https://" + zitadelDomain;
+        
         return webClientBuilder
-                .baseUrl("https://" + zitadelDomain)
+                .baseUrl(baseUrl)
                 .defaultHeader("Authorization", "Bearer " + apiToken)
                 .defaultHeader("Content-Type", "application/json")
                 .defaultHeader("Connect-Protocol-Version", "1")

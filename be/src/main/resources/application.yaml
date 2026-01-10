@@ -109,6 +109,8 @@ logging:
               advisor: DEBUG
 
 zitadel:
+  # domain은 프로토콜 포함 가능 (http:// 또는 https://) 또는 프로토콜 없이 도메인만
+  # 프로토콜이 없으면 자동으로 https://가 추가됨
   domain: ${ZITADEL_DOMAIN}
   org-id: ${ZITADEL_ORG_ID}
   project-id: ${ZITADEL_PROJECT_ID}
