@@ -1,0 +1,48 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=MySQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+
+  # 테스트 환경에서는 OAuth2 Client 자동 설정을 완전히 비활성화
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientAutoConfiguration
+  
+  # 테스트 환경에서는 OAuth2 Resource Server 설정
+  security:
+    oauth2:
+      # OAuth2 Resource Server: 테스트용 가짜 issuer-uri (실제로는 모킹됨)
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8080/.well-known/jwks.json
+
+  ai:
+    openai:
+      api-key: ${SPRING_AI_OPENAI_API_KEY:}
+      # Gemini API를 사용하므로 base-url도 필요
+      chat:
+        base-url: ${SPRING_AI_OPENAI_CHAT_BASE_URL:https://generativelanguage.googleapis.com/v1beta/openai/}
+        completions-path: ${SPRING_AI_OPENAI_CHAT_COMPLETIONS_PATH:/chat/completions}
+
+# 테스트용 Zitadel 설정 (실제 서버 없이 테스트)
+zitadel:
+  domain: http://localhost:9999
+  org-id: test-org-id
+  project-id: test-project-id
+  api-token: test-api-token
+
+logging:
+  level:
+    io.hlab.OpenConsole: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.security: DEBUG

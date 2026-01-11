@@ -7,10 +7,10 @@ spring:
     name: OpenConsole
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL}
-    username: ${SPRING_DATASOURCE_USERNAME}
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:defaultdb}
+    username: ${SPRING_DATASOURCE_USERNAME:sa}
     password: ${SPRING_DATASOURCE_PASSWORD:}
-    driver-class-name: ${SPRING_DATASOURCE_DRIVER}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER:org.h2.Driver}
 
   jpa:
     hibernate:
@@ -18,7 +18,7 @@ spring:
     show-sql: ${SPRING_JPA_SHOW_SQL:false}
     properties:
       hibernate:
-        dialect: ${SPRING_JPA_DIALECT}
+        dialect: ${SPRING_JPA_DIALECT:org.hibernate.dialect.H2Dialect}
         format_sql: true
 
   servlet:
@@ -30,6 +30,41 @@ spring:
   output:
     ansi:
       enabled: ALWAYS
+
+
+  # security
+  security:
+    oauth2:
+      # OAuth2 Client: 로그인 플로우 (FE에서 리다이렉트)
+      client:
+        registration:
+          zitadel: # registrationId
+            client-id: ${ZITADEL_CLIENT_ID:}
+            client-secret: ${ZITADEL_CLIENT_SECRET:}
+            scope:
+              - openid
+              - profile
+              - email
+              # Zitadel Project role을 scope로 요청
+              # 형식: urn:zitadel:iam:org:project:role:{roleName}
+              # 또는 Project ID를 사용한 형식 (실제 Zitadel 설정에 맞게 조정 필요)
+              - urn:zitadel:iam:org:project:role:admin
+              - urn:zitadel:iam:org:project:role:userA
+              - urn:zitadel:iam:org:project:role:userB
+              - urn:zitadel:iam:org:project:role:userC
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/zitadel"
+            client-name: ZITADEL
+        provider:
+          zitadel:
+            issuer-uri: ${ZITADEL_ISSUER_URI:}
+            user-name-attribute: sub # ID값으로 'sub'를 사용하겠다는 명시
+      # OAuth2 Resource Server: JWT 토큰 검증 (API 요청 시)
+      resourceserver:
+        jwt:
+          issuer-uri: ${ZITADEL_ISSUER_URI:} # JWKS 엔드포인트 자동 감지
+          # JWT에서 role을 추출하기 위한 클레임 경로 설정
+          # Zitadel의 경우 role은 보통 "urn:zitadel:iam:org:project:roles" 또는 "roles" 클레임에 있음
 
   # Spring AI: Vertex AI / OpenAI(호환) 설정
   ai:
@@ -59,6 +94,13 @@ logging:
   pattern:
     console: "%clr(%-5level){green} %clr(%logger.%M\\(\\)){cyan}: %msg%n"
   level:
+    io:
+      hlab:
+        OpenConsole:
+          infrastructure:
+            security: DEBUG  # JWT role 추출 디버깅용
+            iam:
+              zitadel: DEBUG  # Zitadel API 호출 디버깅용
     org:
       springframework:
         ai:
@@ -66,31 +108,10 @@ logging:
             client:
               advisor: DEBUG
 
----
-
-spring:
-  config:
-    activate:
-      on-profile: test
-
-  datasource:
-    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=MySQL
-    driver-class-name: org.h2.Driver
-    username: sa
-    password: 
-
-  jpa:
-    hibernate:
-      ddl-auto: create-drop
-    show-sql: false
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.H2Dialect
-
-  ai:
-    openai:
-      api-key: ${SPRING_AI_OPENAI_API_KEY:}
-      # Gemini API를 사용하므로 base-url도 필요
-      chat:
-        base-url: ${SPRING_AI_OPENAI_CHAT_BASE_URL:https://generativelanguage.googleapis.com/v1beta/openai/}
-        completions-path: ${SPRING_AI_OPENAI_CHAT_COMPLETIONS_PATH:/chat/completions}
+zitadel:
+  # domain은 프로토콜 포함 가능 (http:// 또는 https://) 또는 프로토콜 없이 도메인만
+  # 프로토콜이 없으면 자동으로 https://가 추가됨
+  domain: ${ZITADEL_DOMAIN:}
+  org-id: ${ZITADEL_ORG_ID:}
+  project-id: ${ZITADEL_PROJECT_ID:}
+  api-token: ${ZITADEL_SERVICE_TOKEN:}

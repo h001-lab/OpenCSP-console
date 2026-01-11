@@ -5,6 +5,10 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 
+/**
+ * 사용자 생성 요청 DTO
+ * IAM 정보(provider, subject)는 저장하지 않음 (IAM이 SSOT)
+ */
 @Getter
 public class UserCreateRequest {
     @NotBlank(message = "이메일은 필수입니다.")
