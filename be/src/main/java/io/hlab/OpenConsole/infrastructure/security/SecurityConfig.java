@@ -1,6 +1,8 @@
 package io.hlab.OpenConsole.infrastructure.security;
 
 import io.hlab.OpenConsole.infrastructure.iam.IamRole;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -9,6 +11,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
@@ -19,17 +22,19 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity // @PreAuthorize 사용을 위해 필요
-@RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JITUserProvisioningHandler jitUserProvisioningHandler;
+    @Autowired(required = false)
+    private JITUserProvisioningHandler jitUserProvisioningHandler;
+    
+    @Autowired(required = false)
+    private ApplicationContext applicationContext;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -43,29 +48,49 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Swagger UI 및 API 문서는 허용 (테스트용)
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
-                // OAuth2 로그인 엔드포인트는 허용
+                // OAuth2 로그인 엔드포인트는 허용 (OAuth2 Client가 있을 때만 필요)
                 .requestMatchers("/login/**", "/oauth2/**").permitAll()
                 // 나머지 모든 요청은 인증 필요
                 .anyRequest().authenticated()
-            )
-            // OAuth2 Client: 로그인 플로우 (FE에서 리다이렉트)
-            .oauth2Login(oauth2 -> oauth2
-                .successHandler(jitUserProvisioningHandler) // 로그인 성공 시 우리 DB에 저장 및 role 부여
-            )
-            // OAuth2 Resource Server: JWT 토큰 검증 (API 요청 시)
-            .oauth2ResourceServer(oauth2 -> oauth2
-                .jwt(jwt -> jwt
-                    .jwtAuthenticationConverter(jwtToken -> {
-                        // JWT에서 role을 추출하여 GrantedAuthority로 변환
-                        Collection<GrantedAuthority> authorities = extractAuthorities(jwtToken);
-                        return new JwtAuthenticationToken(jwtToken, authorities);
-                    })
-                    // JWT 검증은 application.yaml의 설정을 사용
-                    // issuer-uri를 통해 JWKS 엔드포인트 자동 감지
-                )
             );
         
+        // OAuth2 Client: 로그인 플로우 (FE에서 리다이렉트) - ClientRegistrationRepository가 있을 때만 활성화
+        configureOAuth2Login(http);
+        
+        // OAuth2 Resource Server: JWT 토큰 검증 (API 요청 시)
+        http.oauth2ResourceServer(oauth2 -> oauth2
+            .jwt(jwt -> jwt
+                .jwtAuthenticationConverter(jwtToken -> {
+                    // JWT에서 role을 추출하여 GrantedAuthority로 변환
+                    Collection<GrantedAuthority> authorities = extractAuthorities(jwtToken);
+                    return new JwtAuthenticationToken(jwtToken, authorities);
+                })
+                // JWT 검증은 application.yaml의 설정을 사용
+                // issuer-uri를 통해 JWKS 엔드포인트 자동 감지
+            )
+        );
+        
         return http.build();
+    }
+
+    /**
+     * OAuth2 Login 설정 - ClientRegistrationRepository와 JITUserProvisioningHandler가 있을 때만 활성화
+     */
+    private void configureOAuth2Login(HttpSecurity http) throws Exception {
+        if (applicationContext != null) {
+            try {
+                ClientRegistrationRepository clientRegistrationRepository = 
+                    applicationContext.getBean(ClientRegistrationRepository.class);
+                if (clientRegistrationRepository != null && jitUserProvisioningHandler != null) {
+                    http.oauth2Login(oauth2 -> oauth2
+                        .successHandler(jitUserProvisioningHandler) // 로그인 성공 시 우리 DB에 저장 및 role 부여
+                    );
+                    log.debug("OAuth2 Login configured");
+                }
+            } catch (org.springframework.beans.factory.NoSuchBeanDefinitionException e) {
+                log.debug("OAuth2 Client RegistrationRepository not found, skipping OAuth2 Login configuration");
+            }
+        }
     }
 
     /**

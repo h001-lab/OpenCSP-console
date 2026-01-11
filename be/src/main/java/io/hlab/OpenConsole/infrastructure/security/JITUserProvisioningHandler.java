@@ -10,7 +10,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.stereotype.Component;
 
@@ -26,6 +28,7 @@ import org.springframework.security.web.authentication.SavedRequestAwareAuthenti
  */
 @Slf4j
 @Component
+@ConditionalOnBean(ClientRegistrationRepository.class)
 @RequiredArgsConstructor
 public class JITUserProvisioningHandler extends SavedRequestAwareAuthenticationSuccessHandler {
 

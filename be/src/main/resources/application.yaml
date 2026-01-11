@@ -7,10 +7,10 @@ spring:
     name: OpenConsole
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL:}
-    username: ${SPRING_DATASOURCE_USERNAME:}
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:defaultdb}
+    username: ${SPRING_DATASOURCE_USERNAME:sa}
     password: ${SPRING_DATASOURCE_PASSWORD:}
-    driver-class-name: ${SPRING_DATASOURCE_DRIVER:}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER:org.h2.Driver}
 
   jpa:
     hibernate:
@@ -18,7 +18,7 @@ spring:
     show-sql: ${SPRING_JPA_SHOW_SQL:false}
     properties:
       hibernate:
-        dialect: ${SPRING_JPA_DIALECT:}
+        dialect: ${SPRING_JPA_DIALECT:org.hibernate.dialect.H2Dialect}
         format_sql: true
 
   servlet:
@@ -39,8 +39,8 @@ spring:
       client:
         registration:
           zitadel: # registrationId
-            client-id: ${ZITADEL_CLIENT_ID}
-            client-secret: ${ZITADEL_CLIENT_SECRET}
+            client-id: ${ZITADEL_CLIENT_ID:}
+            client-secret: ${ZITADEL_CLIENT_SECRET:}
             scope:
               - openid
               - profile
@@ -57,12 +57,12 @@ spring:
             client-name: ZITADEL
         provider:
           zitadel:
-            issuer-uri: ${ZITADEL_ISSUER_URI}
+            issuer-uri: ${ZITADEL_ISSUER_URI:}
             user-name-attribute: sub # ID값으로 'sub'를 사용하겠다는 명시
       # OAuth2 Resource Server: JWT 토큰 검증 (API 요청 시)
       resourceserver:
         jwt:
-          issuer-uri: ${ZITADEL_ISSUER_URI} # JWKS 엔드포인트 자동 감지
+          issuer-uri: ${ZITADEL_ISSUER_URI:} # JWKS 엔드포인트 자동 감지
           # JWT에서 role을 추출하기 위한 클레임 경로 설정
           # Zitadel의 경우 role은 보통 "urn:zitadel:iam:org:project:roles" 또는 "roles" 클레임에 있음
 
@@ -111,59 +111,7 @@ logging:
 zitadel:
   # domain은 프로토콜 포함 가능 (http:// 또는 https://) 또는 프로토콜 없이 도메인만
   # 프로토콜이 없으면 자동으로 https://가 추가됨
-  domain: ${ZITADEL_DOMAIN}
-  org-id: ${ZITADEL_ORG_ID}
-  project-id: ${ZITADEL_PROJECT_ID}
-  api-token: ${ZITADEL_SERVICE_TOKEN}
----
-
-spring:
-  config:
-    activate:
-      on-profile: test
-
-  datasource:
-    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=MySQL
-    driver-class-name: org.h2.Driver
-    username: sa
-    password: 
-
-  jpa:
-    hibernate:
-      ddl-auto: create-drop
-    show-sql: false
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.H2Dialect
-
-  # 테스트 환경에서는 OAuth2 Client/Resource Server 설정
-  security:
-    oauth2:
-      # OAuth2 Client: 테스트 환경에서는 자동 설정을 비활성화 (실제 로그인 플로우 테스트 불필요)
-      client:
-        registration: {}  # 빈 객체로 설정하여 OAuth2 Client 자동 설정 비활성화
-      # OAuth2 Resource Server: 테스트용 가짜 issuer-uri (실제로는 모킹됨)
-      resourceserver:
-        jwt:
-          issuer-uri: http://localhost:8080/.well-known/jwks.json
-
-  ai:
-    openai:
-      api-key: ${SPRING_AI_OPENAI_API_KEY:}
-      # Gemini API를 사용하므로 base-url도 필요
-      chat:
-        base-url: ${SPRING_AI_OPENAI_CHAT_BASE_URL:https://generativelanguage.googleapis.com/v1beta/openai/}
-        completions-path: ${SPRING_AI_OPENAI_CHAT_COMPLETIONS_PATH:/chat/completions}
-
-# 테스트용 Zitadel 설정 (실제 서버 없이 테스트)
-zitadel:
-  domain: http://localhost:9999
-  org-id: test-org-id
-  project-id: test-project-id
-  api-token: test-api-token
-
-logging:
-  level:
-    io.hlab.OpenConsole: DEBUG
-    org.springframework.web: DEBUG
-    org.springframework.security: DEBUG
+  domain: ${ZITADEL_DOMAIN:}
+  org-id: ${ZITADEL_ORG_ID:}
+  project-id: ${ZITADEL_PROJECT_ID:}
+  api-token: ${ZITADEL_SERVICE_TOKEN:}
