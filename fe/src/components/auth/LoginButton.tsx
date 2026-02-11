@@ -1,17 +1,16 @@
 "use client";
 
-import { signIn, signOut } from "next-auth/react";
+import { signIn, signOut, useSession } from "next-auth/react";
 import { useAuthStore } from "@/stores/authStore";
 
 export function LoginButton() {
+    const { data: session } = useSession();
     const { user, isAuthenticated, isLoading } = useAuthStore();
+    const idToken = session?.user?.idToken;
 
     if (isLoading) {
         return (
-            <button
-                disabled
-                className="px-4 py-2 bg-gray-300 text-gray-600 rounded-md cursor-not-allowed"
-            >
+            <button disabled className="px-4 py-2 bg-gray-300 text-gray-600 rounded-md cursor-not-allowed">
                 Loading...
             </button>
         );
@@ -27,7 +26,11 @@ export function LoginButton() {
                     )}
                 </div>
                 <button
-                    onClick={() => signOut()}
+                    onClick={() => {
+                        signOut({
+                            callbackUrl: `/?logout=true${idToken ? `&id_token_hint=${idToken}` : ""}`
+                        });
+                    }}
                     className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
                 >
                     Logout

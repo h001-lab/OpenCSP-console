@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { SessionProvider, useSession } from "next-auth/react";
+import { SessionProvider, signOut, useSession } from "next-auth/react";
 import { useAuthStore } from "@/stores/authStore";
 
 interface SessionUser {
@@ -16,7 +16,7 @@ interface SessionUser {
 
 /**
  * AuthSync 컴포넌트
- * NextAuth 세션을 Zustand store와 동기화합니다.
+ * NextAuth 세션을 Zustand store와 동기화
  */
 function AuthSync() {
     const { data: session, status } = useSession();
@@ -38,14 +38,15 @@ function AuthSync() {
                     email: user.email || undefined,
                     image: user.image || undefined,
                     roles: user.roles || [],
-                },
-                {
-                    accessToken: user.accessToken || "",
-                    idToken: user.idToken || "",
                 }
             );
         } else {
             clearAuth();
+        }
+
+        if (session?.error === "RefreshTokenError") {
+            signOut({ callbackUrl: "/auth/signin" }); // 리프레시 토큰까지 만료된 경우 강제 로그아웃
+            return;
         }
     }, [session, status, setAuth, clearAuth, setLoading]);
 
@@ -54,8 +55,8 @@ function AuthSync() {
 
 /**
  * AuthProvider 컴포넌트
- * SessionProvider로 앱을 감싸고 AuthSync를 통해 세션을 store와 동기화합니다.
- * 모든 컴포넌트는 useAuthStore를 통해 인증 상태에 접근해야 합니다.
+ * SessionProvider로 앱을 감싸고 AuthSync를 통해 세션을 store와 동기화
+ * 모든 컴포넌트는 useAuthStore를 통해 인증 상태에 접근해야 함
  */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     return (

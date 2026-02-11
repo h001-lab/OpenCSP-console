@@ -1,11 +1,10 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { AuthState, AuthUser, AuthTokens } from '@/types/auth';
+import { AuthState, AuthUser } from '@/types/auth';
 
 interface AuthActions {
-  setAuth: (user: AuthUser, tokens: AuthTokens) => void;
+  setAuth: (user: AuthUser) => void;
   clearAuth: () => void;
-  updateTokens: (tokens: AuthTokens) => void;
   setLoading: (isLoading: boolean) => void;
   setError: (error: string | null) => void;
   hasRole: (role: string) => boolean;
@@ -14,7 +13,6 @@ interface AuthActions {
 
 const initialState: AuthState = {
   user: null,
-  tokens: null,
   isAuthenticated: false,
   isLoading: true,
   error: null,
@@ -25,10 +23,9 @@ export const useAuthStore = create<AuthState & AuthActions>()(
     (set, get) => ({
       ...initialState,
 
-      setAuth: (user, tokens) =>
+      setAuth: (user) =>
         set({
           user,
-          tokens,
           isAuthenticated: true,
           isLoading: false,
           error: null,
@@ -39,11 +36,6 @@ export const useAuthStore = create<AuthState & AuthActions>()(
           ...initialState,
           isLoading: false,
         }),
-
-      updateTokens: (tokens) =>
-        set((state) => ({
-          tokens: { ...state.tokens, ...tokens },
-        })),
 
       setLoading: (isLoading) => set({ isLoading }),
 
@@ -64,7 +56,6 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({
         user: state.user,
-        tokens: state.tokens,
         isAuthenticated: state.isAuthenticated,
       }),
     }
