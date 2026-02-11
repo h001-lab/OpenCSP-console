@@ -3,10 +3,13 @@
 import Layout from "@/components/Layout/Layout";
 import { useAutoMsg } from "@/providers/MessagesProvider";
 import { InfoPageMessage } from "../types";
+import { useAdminProtection } from "@/hooks/useAdminProtection";
 
 export default function Page() {
+	const isAdmin = useAdminProtection();
 	const t = useAutoMsg() as unknown as InfoPageMessage;
-	if (!t) return null;
+
+	if (!isAdmin || !t) return null;
 
 	return (
 		<Layout navDomain="Nav" sidebarDomain="Admin">
