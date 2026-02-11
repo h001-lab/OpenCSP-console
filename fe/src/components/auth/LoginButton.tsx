@@ -28,7 +28,7 @@ export function LoginButton() {
                 </div>
                 <button
                     onClick={() => signOut()}
-                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                    className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
                 >
                     Logout
                 </button>
