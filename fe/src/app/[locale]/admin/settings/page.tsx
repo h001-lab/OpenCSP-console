@@ -7,15 +7,17 @@ import { useState } from "react";
 import { AnnouncementSelector } from "./_components/AnnouncementSelector";
 import Layout from "@/components/Layout/Layout";
 import { useAutoMsg, useMsg } from "@/providers/MessagesProvider";
+import { useAdminProtection } from "@/hooks/useAdminProtection";
 
 export default function Page() {
+	const isAdmin = useAdminProtection();
 	const t = useAutoMsg() as unknown as SettingsPageMessage;
 	const components = useMsg("Components") as unknown as ComponentsMessage;
 	const [selectedLink, setSelectedLink] = useState("");
 	const [message, setMessage] = useState(
 		"신규 공지사항이 없습니다.\n자세한 내용은 공지사항 페이지를 확인해주세요."
 	);
-	if (!t || !components) return null;
+	if (!isAdmin || !t || !components) return null;
 
 	return (
 		<Layout navDomain="Nav" sidebarDomain="Admin">

@@ -3,11 +3,12 @@
 import Layout from "@/components/Layout/Layout";
 import { useAutoMsg } from "@/providers/MessagesProvider";
 import { MonitoringPageMessage } from "../types";
-
+import { useAdminProtection } from "@/hooks/useAdminProtection";
 
 export default function Page() {
+	const isAdmin = useAdminProtection();
 	const t = useAutoMsg() as unknown as MonitoringPageMessage;
-	if (!t) return null;
+	if (!isAdmin || !t) return null;
 
 	return (
 		<Layout navDomain="Nav" sidebarDomain="Admin">

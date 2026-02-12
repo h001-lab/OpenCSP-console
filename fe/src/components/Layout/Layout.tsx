@@ -1,8 +1,10 @@
 "use client";
 
-import { NotificationBanner, Sidebar, NavBar, Avatar, SideBarItem } from "@h001/ui";
+import { NotificationBanner, Sidebar, NavBar, SideBarItem } from "@h001/ui";
 import { Link, useMsg } from "@/providers/MessagesProvider";
 import { PropsWithChildren, useState } from "react";
+import { LoginButton } from "@/components/auth/LoginButton";
+import { useAuthStore } from "@/stores/authStore";
 
 
 export interface LayoutProps extends PropsWithChildren {
@@ -30,22 +32,33 @@ interface SidebarMessage {
   sidebar: SideBarItem[];
 }
 
-export default function Layout({ children, navDomain, sidebarDomain }: LayoutProps) {
+export default function Layout({
+  children,
+  navDomain,
+  sidebarDomain,
+}: LayoutProps) {
+  const { isAdmin } = useAuthStore();
+
   const nav = useMsg(navDomain) as unknown as NavMessage;
   const components = useMsg("Components") as unknown as ComponentsMessage;
   const t = useMsg(sidebarDomain) as unknown as SidebarMessage;
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Rules of Hooks
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   if (!nav || !t || !components) return null;
 
   return (
     <>
-      <NotificationBanner linkLabel={components.Banner.linkLabel} linkHref="/announcements/1" storageKey={components.Banner.storageKey}>
+      <NotificationBanner
+        linkLabel={components.Banner.linkLabel}
+        linkHref="/announcements/1"
+        storageKey={components.Banner.storageKey}
+      >
         공지사항 테스트
       </NotificationBanner>
       <NavBar
         left={<div className="flex items-center gap-3">
           <button
-            onClick={() => setIsSidebarOpen(true)} // 열기
+            onClick={() => setIsSidebarOpen(true)}
             className="md:hidden p-1 -ml-1 rounded hover:bg-gray-100"
             aria-label="메뉴 열기">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -59,10 +72,10 @@ export default function Layout({ children, navDomain, sidebarDomain }: LayoutPro
             <Link href="/">{nav.home as string}</Link>
             <Link href="/dashboard">{nav.dashboard as string}</Link>
             <Link href="/announcements">{nav.announcements as string}</Link>
-            <Link href="/admin">{nav.admin as string}</Link>
+            {isAdmin() && <Link href="/admin">{nav.admin as string}</Link>}
           </>
         }
-        right={<Avatar name="관리자" />}
+        right={<LoginButton />}
       />
       <div className="flex min-h-[calc(100vh-3rem)]">
         <Sidebar

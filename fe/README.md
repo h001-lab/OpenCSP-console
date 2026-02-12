@@ -24,10 +24,15 @@ npm cache clean --force
 npm install
 ```
 
+## npm 버전 업데이트
+```sh
+npx npm-check-updates -u
+npm install
+```
+
 ## 다국어 지원 관련 이슈 
 ### 전체 구조 요약
 1) 원본 메시지는 JSON으로 작성
   - public/messages/ko.json
   - public/messages/en.json
 2) 각 페이지의 타입은 Page.tsx 에 정의
-
