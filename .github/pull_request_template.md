@@ -1,41 +1,41 @@
 ## 📝 Summary
-<!-- PR의 목적과 내용을 간단히 설명해주세요 -->
+<!-- Briefly describe the purpose and content of this PR -->
 
-- 
+-
 
 ---
 
 ## 🔗 Related Issue
-<!-- 해결하는 이슈 번호를 적어주세요. 예: #12 -->
+<!-- Link the issue this PR resolves. e.g. #12 -->
 Closes #
 
 ---
 
 ## 📦 Changes
-<!-- 이 PR에서 어떤 변경이 이뤄졌는지 bullet로 정리해주세요 -->
+<!-- List what was changed in this PR -->
 
-- 
-- 
-- 
+-
+-
+-
 
 ---
 
 ## 🧪 Test Plan
-<!-- 어떻게 테스트했는지 작성해주세요 -->
+<!-- Describe how you tested your changes -->
 
-- [ ] 로컬에서 빌드 확인함
-- [ ] 기능 동작 확인함
-- [ ] Lint 통과함
+- [ ] Build passes locally
+- [ ] Feature works as expected
+- [ ] Lint passes
 
 ---
 
-## 📸 Screenshots (선택)
-<!-- UI 변경 시 스크린샷 첨부 -->
+## 📸 Screenshots (optional)
+<!-- Attach screenshots for any UI changes -->
 
 ---
 
 ## 🔍 Checklist
-- [ ] PR 제목 컨벤션 준수 (feat/fix/chore 등)
-- [ ] 불필요한 변경 없음
-- [ ] 관련 없는 commit 없음
-- [ ] 리뷰어가 이해하기 쉬운 상태인지 확인함
+- [ ] PR title follows convention (feat/fix/chore/etc.)
+- [ ] No unintended changes included
+- [ ] No unrelated commits
+- [ ] PR is easy for reviewers to understand
