@@ -20,58 +20,8 @@ Users can request resource creation through the console, which is forwarded to t
 | Backend | Spring Boot 3.5, Java 21, Spring Security (JWT Resource Server) |
 | IAM | Zitadel (OIDC / OAuth2) |
 | PAM | Teleport (SSH proxy) |
-| Database | H2 (dev), PostgreSQL (prod) |
+| Database | H2/SQLite (dev), PostgreSQL / MariaDB (prod) |
 | i18n | Custom message broker (en / ko / jp) |
-
----
-
-## Frontend
-
-- Built with **Next.js 15** and **Zustand** for state management.
-- All pages are scoped under `[locale]/` to support internationalization (`en`, `ko`, `jp`; default: `en`). Messages are loaded at runtime from `public/messages/{locale}.json`.
-- UI components are based on a custom Tailwind CSS package: [hwan001/UI](https://github.com/hwan001/UI).
-- Authentication is handled via **NextAuth** with the built-in Zitadel OIDC provider. The session is synced into Zustand via `AuthProvider`.
-
-### Key Frontend Files
-
-| File | Purpose |
-|------|---------|
-| `fe/src/lib/auth.ts` | NextAuth config — Zitadel OIDC, token refresh, role extraction |
-| `fe/src/lib/zitadel-client.ts` | Direct Zitadel Management API client |
-| `fe/src/stores/authStore.ts` | Zustand auth state store |
-| `fe/src/providers/AuthProvider.tsx` | Syncs NextAuth session → Zustand |
-| `fe/src/proxy.ts` | Middleware for locale detection and redirect |
-
----
-
-## Backend
-
-- Built with **Spring Boot 3.5** and **Java 21**, following **Domain-Driven Design (DDD)** principles.
-- Stateless JWT Resource Server — Spring Security validates tokens issued by Zitadel, maps roles to `GrantedAuthority`, and enforces access with `@PreAuthorize`.
-- JIT provisioning: `JITUserProvisioningHandler` creates a local user record on first OAuth2 login.
-
-### Package Structure
-
-```
-io.hlab.OpenConsole/
-  api/            # REST controllers + request/response DTOs
-  application/    # Service layer (business logic)
-  domain/         # JPA entities + repository interfaces
-  infrastructure/
-    config/       # OpenAPI / Swagger config
-    iam/          # IAM abstraction + Zitadel implementation
-    persistence/  # Spring Data JPA repository implementations
-    security/     # SecurityConfig, JWT extraction, JIT provisioning
-```
-
-### Key Backend Files
-
-| File | Purpose |
-|------|---------|
-| `infrastructure/security/SecurityConfig.java` | Spring Security filter chain, JWT role extraction |
-| `infrastructure/security/JITUserProvisioningHandler.java` | Creates local user on first OAuth2 login |
-| `infrastructure/iam/zitadel/ZitadelClient.java` | Zitadel Management API calls |
-| `infrastructure/iam/IamRole.java` | Supported roles: `admin`, `userA`, `userB`, `userC` |
 
 ---
 
@@ -116,50 +66,61 @@ flowchart TD
 
 - Node.js 20+, npm
 - Java 21, Gradle
-- A running Zitadel instance (for auth)
 
 ### Frontend
 
 ```bash
 cd fe
 npm install
-cp .env.local.example .env.local  # fill in your Zitadel credentials
-npm run dev
+cp .env.example .env.local   # fill in values
+npm run dev                  # http://localhost:3000
 ```
 
 ### Backend
 
 ```bash
 cd be
-cp .env.example .env  # fill in your Zitadel and DB credentials
-./gradlew bootRun
+cp .env.sample .env          # fill in values
+./gradlew bootRun            # http://localhost:8080
 ```
 
-### Environment Variables
+---
 
-**Frontend (`fe/.env.local`)**
+## Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `ZITADEL_ISSUER` | Your Zitadel issuer URL |
-| `ZITADEL_CLIENT_ID` | OAuth2 client ID |
-| `AUTH_SECRET` | NextAuth secret (random string) |
-| `NEXT_PUBLIC_SITE_URL` | Public URL of the frontend (e.g. `http://localhost:3000`) |
+### Frontend (`fe/.env.local`)
 
-**Backend (`be/.env`)**
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `NEXTAUTH_URL` | Yes | Public URL of the frontend (e.g. `http://localhost:3000`) |
+| `AUTH_SECRET` | Yes | NextAuth secret — generate with `openssl rand -base64 32` |
+| `ZITADEL_ISSUER` | Yes | Zitadel issuer URL (e.g. `https://auth.example.com`) |
+| `ZITADEL_CLIENT_ID` | Yes | OAuth2 client ID |
+| `ZITADEL_CLIENT_SECRET` | No | OAuth2 client secret (required if Zitadel app uses secret) |
+| `ZITADEL_PROJECT_ID` | No | Zitadel project ID (for audience scope) |
+| `NEXT_PUBLIC_SITE_URL` | Yes | Same as `NEXTAUTH_URL` (exposed to browser) |
+| `NEXT_PUBLIC_BE_WS_URL` | No | WebSocket base URL for terminal console (e.g. `ws://localhost:8080`) |
+| `BACKEND_URL` | Yes | Internal URL of the Spring backend (server-side only) |
 
-| Variable | Description |
-|----------|-------------|
-| `ZITADEL_ISSUER_URI` | Zitadel OIDC issuer URI |
-| `ZITADEL_CLIENT_ID` | OAuth2 client ID |
-| `ZITADEL_CLIENT_SECRET` | OAuth2 client secret |
-| `ZITADEL_DOMAIN` | Your Zitadel domain |
-| `ZITADEL_ORG_ID` | Zitadel organization ID |
-| `ZITADEL_PROJECT_ID` | Zitadel project ID |
-| `ZITADEL_SERVICE_TOKEN` | Service account token for Management API |
-| `SPRING_DATASOURCE_URL` | JDBC URL (defaults to H2 in-memory if unset) |
-| `SPRING_DATASOURCE_USERNAME` | DB username |
-| `SPRING_DATASOURCE_PASSWORD` | DB password |
+### Backend (`be/.env`)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `APP_IAM_PROVIDER` | `none` | IAM provider: `none` (dev) or `zitadel` (prod) |
+| `APP_CONFIG_ENCRYPTION_KEY` | `opencsp-dev-key!` | AES encryption key for DB-stored secrets (16+ chars) |
+| `APP_K8S_ENABLED` | `false` | Enable Kubernetes provisioning client |
+| `APP_K8S_API_SERVER` | — | K8s API server URL (e.g. `https://192.168.0.100:6443`) |
+| `APP_K8S_TOKEN` | — | K8s service account Bearer token |
+| `ZITADEL_ISSUER_URI` | — | Zitadel OIDC issuer URI |
+| `ZITADEL_CLIENT_ID` | — | OAuth2 client ID |
+| `ZITADEL_CLIENT_SECRET` | — | OAuth2 client secret |
+| `ZITADEL_DOMAIN` | — | Zitadel domain (protocol optional) |
+| `ZITADEL_ORG_ID` | — | Zitadel organization ID |
+| `ZITADEL_PROJECT_ID` | — | Zitadel project ID |
+| `ZITADEL_SERVICE_TOKEN` | — | Service account token for Zitadel Management API |
+| `SPRING_DATASOURCE_URL` | H2 file | JDBC URL — see `.env.sample` for SQLite/MariaDB/PostgreSQL examples |
+| `SPRING_DATASOURCE_USERNAME` | `sa` | DB username |
+| `SPRING_DATASOURCE_PASSWORD` | — | DB password |
 
 ---
 
@@ -167,7 +128,7 @@ cp .env.example .env  # fill in your Zitadel and DB credentials
 
 CI runs on PRs to `main` via `.github/workflows/ci.yaml`. It detects which sub-project changed and runs only the relevant pipeline:
 
-- **Frontend**: lint + build
+- **Frontend**: `npm run lint` + `npm run build`
 - **Backend**: `./gradlew build` (tests run against H2 in-memory DB)
 
 ---

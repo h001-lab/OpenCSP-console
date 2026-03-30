@@ -3,3 +3,16 @@
 .next
 node_modules
 .idea
+
+# Ignore Claude cache and related files
+.claude
+.claude_cache
+.claude_cache_*
+.claude_cache_*/**
+.claude_cache_*/**/*
+
+# Ignore logs and temporary files
+logs/
+data/
+*.log
+*.db
