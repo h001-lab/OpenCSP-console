@@ -1,4 +1,4 @@
-package io.hlab.OpenConsole.infrastructure.iam.zitadel.dto;
+package io.hlab.opencsp.infrastructure.iam.zitadel.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;

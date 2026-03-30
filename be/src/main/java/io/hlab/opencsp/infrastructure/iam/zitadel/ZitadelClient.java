@@ -1,21 +1,23 @@
-package io.hlab.OpenConsole.infrastructure.iam.zitadel;
+package io.hlab.opencsp.infrastructure.iam.zitadel;
 
-import io.hlab.OpenConsole.infrastructure.iam.IamClient;
-import io.hlab.OpenConsole.infrastructure.iam.IamException;
-import io.hlab.OpenConsole.infrastructure.iam.IamRole;
-import io.hlab.OpenConsole.infrastructure.iam.zitadel.client.ZitadelAuthExecutor;
-import io.hlab.OpenConsole.infrastructure.iam.zitadel.client.ZitadelUserExecutor;
-import io.hlab.OpenConsole.infrastructure.iam.zitadel.dto.ZitadelAuthorizationDto;
-import io.hlab.OpenConsole.infrastructure.iam.zitadel.dto.ZitadelUserDto;
+import io.hlab.opencsp.infrastructure.iam.IamClient;
+import io.hlab.opencsp.infrastructure.iam.IamException;
+import io.hlab.opencsp.infrastructure.iam.IamRole;
+import io.hlab.opencsp.infrastructure.iam.IamUserInfo;
+import io.hlab.opencsp.infrastructure.iam.zitadel.client.ZitadelAuthExecutor;
+import io.hlab.opencsp.infrastructure.iam.zitadel.client.ZitadelUserExecutor;
+import io.hlab.opencsp.infrastructure.iam.zitadel.dto.ZitadelAuthorizationDto;
+import io.hlab.opencsp.infrastructure.iam.zitadel.dto.ZitadelUserDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Zitadel Management API 클라이언트 구현체 (Facade)
@@ -33,18 +35,9 @@ import java.util.Optional;
  * </ul>
  */
 @Slf4j
-@Component
+@Component("zitadel-iam-client")
 @RequiredArgsConstructor
 public class ZitadelClient implements IamClient {
-
-    @Value("${zitadel.domain}")
-    private String zitadelDomain;
-
-    @Value("${zitadel.org-id}")
-    private String orgId;
-
-    @Value("${zitadel.api-token}")
-    private String apiToken;
 
     private final ZitadelAuthExecutor authExecutor;
     private final ZitadelUserExecutor userExecutor;
@@ -132,22 +125,23 @@ public class ZitadelClient implements IamClient {
     public List<IamRole> getUserRoles(String userId) throws IamException {
         log.info("Zitadel에서 사용자 role 조회: userId={}", userId);
 
-        ZitadelAuthorizationDto.ListResponse response = authExecutor.listAuthorizations(userId);
-        
-        // 응답에서 roleKeys 추출하여 IamRole 리스트로 변환
+        ZitadelAuthorizationDto.ListResponse response = authExecutor.listAllAuthorizations();
+
         List<IamRole> roles = new ArrayList<>();
-        if (response != null && response.authorizations() != null && !response.authorizations().isEmpty()) {
-            ZitadelAuthorizationDto.ListResponse.Authorization authorization = response.authorizations().get(0);
-            if (authorization.roleKeys() != null) {
-                for (String roleKey : authorization.roleKeys()) {
-                    IamRole iamRole = IamRole.fromString(roleKey);
+        if (response != null && response.authorizations() != null) {
+            for (ZitadelAuthorizationDto.ListResponse.Authorization auth : response.authorizations()) {
+                // user.id로 필터링 (inUserIds 필터가 Zitadel에서 무시되므로 Java에서 처리)
+                if (auth.user() == null || !userId.equals(auth.user().id())) continue;
+                if (auth.roles() == null) continue;
+                for (var role : auth.roles()) {
+                    IamRole iamRole = IamRole.fromString(role.key());
                     if (iamRole != null && !roles.contains(iamRole)) {
                         roles.add(iamRole);
                     }
                 }
             }
         }
-        
+
         log.info("Zitadel role 조회 완료: userId={}, roles={}", userId, roles);
         return roles;
     }
@@ -191,20 +185,74 @@ public class ZitadelClient implements IamClient {
         throw new IamException("사용자 email을 찾을 수 없습니다: subject=" + subject);
     }
 
+    @Override
+    public List<IamUserInfo> listUsers(int limit) throws IamException {
+        log.info("Zitadel에서 사용자 목록 조회: limit={}", limit);
+
+        ZitadelUserDto.ListUsersResponse userResponse = userExecutor.listUsers(0, limit, true, null, List.of());
+        if (userResponse == null || userResponse.result() == null) return List.of();
+
+        // authorization 전체를 한 번만 조회하여 userId → roles 맵 구성
+        Map<String, List<IamRole>> rolesByUserId;
+        try {
+            ZitadelAuthorizationDto.ListResponse authResponse = authExecutor.listAllAuthorizations();
+            rolesByUserId = buildRolesByUserIdMap(authResponse);
+        } catch (IamException e) {
+            log.warn("Authorization 전체 조회 실패 (역할 정보 없이 진행): {}", e.getMessage());
+            rolesByUserId = Map.of();
+        }
+
+        final Map<String, List<IamRole>> finalRolesByUserId = rolesByUserId;
+        return userResponse.result().stream()
+                .map(user -> {
+                    String userId = user.id() != null ? user.id() : user.userId();
+                    String email = (user.human() != null && user.human().email() != null)
+                            ? user.human().email().email() : "";
+                    String name = (user.human() != null && user.human().profile() != null)
+                            ? user.human().profile().displayName() : "";
+                    List<IamRole> roles = finalRolesByUserId.getOrDefault(userId, List.of());
+                    return IamUserInfo.of(userId, email, name, roles);
+                })
+                .toList();
+    }
+
+    /**
+     * ListAuthorizations 응답을 userId → List<IamRole> 맵으로 변환
+     */
+    private Map<String, List<IamRole>> buildRolesByUserIdMap(ZitadelAuthorizationDto.ListResponse response) {
+        if (response == null || response.authorizations() == null) return Map.of();
+
+        return response.authorizations().stream()
+                .filter(auth -> auth.user() != null && auth.user().id() != null)
+                .filter(auth -> auth.roles() != null)
+                .collect(Collectors.groupingBy(
+                        auth -> auth.user().id(),
+                        Collectors.flatMapping(
+                                auth -> auth.roles().stream()
+                                        .map(r -> IamRole.fromString(r.key()))
+                                        .filter(r -> r != null),
+                                Collectors.toList()
+                        )
+                ));
+    }
+
     /**
      * Authorization ID 조회 (헬퍼 메소드)
-     * grantId를 찾아서 Optional로 반환합니다. 검증은 호출하는 쪽에서 담당합니다.
+     * 전체 조회 후 userId로 필터링하여 grantId를 반환
      */
     private Optional<String> findAuthorizationId(String userId) throws IamException {
-        ZitadelAuthorizationDto.ListResponse response = authExecutor.listAuthorizations(userId);
-        
-        if (response != null && response.authorizations() != null && !response.authorizations().isEmpty()) {
-            ZitadelAuthorizationDto.ListResponse.Authorization firstGrant = response.authorizations().get(0);
-            String grantId = firstGrant.id();
-            if (grantId != null && !grantId.isBlank()) {
-                log.debug("Authorization ID 조회 완료: userId={}, grantId={}", userId, grantId);
-                return Optional.of(grantId);
-            }
+        ZitadelAuthorizationDto.ListResponse response = authExecutor.listAllAuthorizations();
+
+        if (response != null && response.authorizations() != null) {
+            return response.authorizations().stream()
+                    .filter(auth -> auth.user() != null && userId.equals(auth.user().id()))
+                    .map(ZitadelAuthorizationDto.ListResponse.Authorization::id)
+                    .filter(id -> id != null && !id.isBlank())
+                    .findFirst()
+                    .map(id -> {
+                        log.debug("Authorization ID 조회 완료: userId={}, grantId={}", userId, id);
+                        return id;
+                    });
         }
 
         return Optional.empty();
@@ -214,17 +262,21 @@ public class ZitadelClient implements IamClient {
      * 현재 사용자의 roleKeys 조회 (헬퍼 메소드)
      */
     private List<String> getCurrentRoleKeys(String userId) throws IamException {
-        ZitadelAuthorizationDto.ListResponse response = authExecutor.listAuthorizations(userId);
-        List<String> currentRoleKeys = new ArrayList<>();
-        
-        if (response != null && response.authorizations() != null && !response.authorizations().isEmpty()) {
-            ZitadelAuthorizationDto.ListResponse.Authorization authorization = response.authorizations().get(0);
-            if (authorization.roleKeys() != null) {
-                currentRoleKeys = new ArrayList<>(authorization.roleKeys());
-            }
+        ZitadelAuthorizationDto.ListResponse response = authExecutor.listAllAuthorizations();
+
+        if (response != null && response.authorizations() != null) {
+            return response.authorizations().stream()
+                    .filter(auth -> auth.user() != null && userId.equals(auth.user().id()))
+                    .findFirst()
+                    .map(auth -> auth.roles() != null
+                            ? auth.roles().stream()
+                                    .map(ZitadelAuthorizationDto.ListResponse.Authorization.AuthorizationRole::key)
+                                    .collect(Collectors.toList())
+                            : new ArrayList<String>())
+                    .orElse(new ArrayList<>());
         }
-        
-        return currentRoleKeys;
+
+        return new ArrayList<>();
     }
 }
 

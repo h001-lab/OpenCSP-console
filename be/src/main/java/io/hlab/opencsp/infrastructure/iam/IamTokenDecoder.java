@@ -1,4 +1,4 @@
-package io.hlab.OpenConsole.infrastructure.iam;
+package io.hlab.opencsp.infrastructure.iam;
 
 import java.util.Map;
 

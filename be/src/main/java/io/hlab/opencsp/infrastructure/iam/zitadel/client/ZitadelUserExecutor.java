@@ -1,10 +1,13 @@
-package io.hlab.OpenConsole.infrastructure.iam.zitadel.client;
+package io.hlab.opencsp.infrastructure.iam.zitadel.client;
 
-import io.hlab.OpenConsole.infrastructure.iam.IamException;
-import io.hlab.OpenConsole.infrastructure.iam.zitadel.dto.ZitadelUserDto;
+import io.hlab.opencsp.domain.config.ConfigCategory;
+import io.hlab.opencsp.infrastructure.config.ConfigStore;
+import io.hlab.opencsp.infrastructure.iam.IamException;
+import io.hlab.opencsp.infrastructure.iam.zitadel.dto.ZitadelUserDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
@@ -21,34 +24,48 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ZitadelUserExecutor {
 
-    @Value("${zitadel.domain}")
-    private String zitadelDomain;
-
-    @Value("${zitadel.org-id}")
-    private String orgId;
-
-    @Value("${zitadel.api-token}")
-    private String apiToken;
-
+    private final ConfigStore configStore;
     private final WebClient.Builder webClientBuilder;
+
+    // --- ConfigStore 헬퍼 (호출 시점마다 최신 DB 값 반영) ---
+
+    private String issuerUri() {
+        return configStore.get(ConfigCategory.IAM, "zitadel.issuer-uri", "");
+    }
+
+    private String apiToken() {
+        return configStore.get(ConfigCategory.IAM, "zitadel.service-token", "");
+    }
+
+    private String orgId() {
+        return configStore.get(ConfigCategory.IAM, "zitadel.org-id", "");
+    }
 
     /**
      * WebClient 인스턴스 생성 (공통 헤더 설정)
      */
     private WebClient createWebClient() {
-        // domain이 null이거나 빈 문자열인 경우 처리
-        if (zitadelDomain == null || zitadelDomain.isBlank()) {
-            throw new IllegalStateException("zitadel.domain이 설정되지 않았습니다. application.yaml 또는 환경 변수를 확인하세요.");
+        String issuerUri = issuerUri();
+        if (issuerUri.isBlank()) {
+            throw new IamException("zitadel.issuer-uri가 설정되지 않았습니다. Admin UI 또는 환경 변수를 확인하세요.");
         }
-        
-        // domain에 프로토콜이 이미 포함되어 있으면 그대로 사용, 없으면 https:// 추가
-        String baseUrl = zitadelDomain.startsWith("http://") || zitadelDomain.startsWith("https://")
-                ? zitadelDomain
-                : "https://" + zitadelDomain;
-        
+        String baseUrl;
+        try {
+            java.net.URI uri = java.net.URI.create(issuerUri);
+            baseUrl = uri.getScheme() + "://" + uri.getAuthority();
+        } catch (Exception e) {
+            throw new IamException("zitadel.issuer-uri가 올바르지 않습니다: " + issuerUri);
+        }
+        String token = apiToken();
+        if (token.isBlank()) {
+            var auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth instanceof JwtAuthenticationToken jwtAuth) {
+                token = jwtAuth.getToken().getTokenValue();
+            }
+        }
         return webClientBuilder
                 .baseUrl(baseUrl)
-                .defaultHeader("Authorization", "Bearer " + apiToken)
+                .defaultHeader("Authorization", "Bearer " + token)
                 .defaultHeader("Content-Type", "application/json")
                 .defaultHeader("Connect-Protocol-Version", "1")
                 .build();
@@ -74,7 +91,7 @@ public class ZitadelUserExecutor {
         try {
             return webClient.post()
                     .uri("/v2/users")
-                    .header("x-zitadel-orgid", this.orgId)
+                    .header("x-zitadel-orgid", orgId())
                     .bodyValue(request)
                     .retrieve()
                     .bodyToMono(ZitadelUserDto.ListUsersResponse.class)
@@ -116,7 +133,7 @@ public class ZitadelUserExecutor {
         try {
             return webClient.get()
                     .uri("/v2/users/{user_id}", userId)
-                    .header("x-zitadel-orgid", this.orgId)
+                    .header("x-zitadel-orgid", orgId())
                     .retrieve()
                     .bodyToMono(ZitadelUserDto.GetUserByIDResponse.class)
                     .block();
@@ -141,7 +158,7 @@ public class ZitadelUserExecutor {
         try {
             ZitadelUserDto.CreateUserResponse response = webClient.post()
                     .uri("/v2/users/new")
-                    .header("x-zitadel-orgid", this.orgId)
+                    .header("x-zitadel-orgid", orgId())
                     .bodyValue(request)
                     .retrieve()
                     .bodyToMono(ZitadelUserDto.CreateUserResponse.class)
@@ -166,7 +183,7 @@ public class ZitadelUserExecutor {
         try {
             ZitadelUserDto.DeleteUserResponse response = webClient.delete()
                     .uri("/v2/users/{user_id}", userId)
-                    .header("x-zitadel-orgid", this.orgId)
+                    .header("x-zitadel-orgid", orgId())
                     .retrieve()
                     .bodyToMono(ZitadelUserDto.DeleteUserResponse.class)
                     .block();
@@ -194,7 +211,7 @@ public class ZitadelUserExecutor {
         try {
             ZitadelUserDto.DeactivateUserResponse response = webClient.post()
                     .uri("/v2/users/{user_id}/deactivate", userId)
-                    .header("x-zitadel-orgid", this.orgId)
+                    .header("x-zitadel-orgid", orgId())
                     .retrieve()
                     .bodyToMono(ZitadelUserDto.DeactivateUserResponse.class)
                     .block();
@@ -225,7 +242,7 @@ public class ZitadelUserExecutor {
         try {
             ZitadelUserDto.SetUserMetadataResponse response = webClient.post()
                     .uri("/v2/users/{user_id}/metadata", userId)
-                    .header("x-zitadel-orgid", this.orgId)
+                    .header("x-zitadel-orgid", orgId())
                     .bodyValue(request)
                     .retrieve()
                     .bodyToMono(ZitadelUserDto.SetUserMetadataResponse.class)
@@ -254,7 +271,7 @@ public class ZitadelUserExecutor {
         try {
             ZitadelUserDto.LockUserResponse response = webClient.post()
                     .uri("/v2/users/{user_id}/lock", userId)
-                    .header("x-zitadel-orgid", this.orgId)
+                    .header("x-zitadel-orgid", orgId())
                     .retrieve()
                     .bodyToMono(ZitadelUserDto.LockUserResponse.class)
                     .block();
@@ -282,7 +299,7 @@ public class ZitadelUserExecutor {
         try {
             ZitadelUserDto.UnlockUserResponse response = webClient.post()
                     .uri("/v2/users/{user_id}/unlock", userId)
-                    .header("x-zitadel-orgid", this.orgId)
+                    .header("x-zitadel-orgid", orgId())
                     .retrieve()
                     .bodyToMono(ZitadelUserDto.UnlockUserResponse.class)
                     .block();
@@ -311,7 +328,7 @@ public class ZitadelUserExecutor {
         try {
             ZitadelUserDto.CreateInviteCodeResponse response = webClient.post()
                     .uri("/v2/users/{user_id}/invite_code", userId)
-                    .header("x-zitadel-orgid", this.orgId)
+                    .header("x-zitadel-orgid", orgId())
                     .bodyValue(request)
                     .retrieve()
                     .bodyToMono(ZitadelUserDto.CreateInviteCodeResponse.class)

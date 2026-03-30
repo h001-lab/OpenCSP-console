@@ -1,6 +1,7 @@
-package io.hlab.OpenConsole.infrastructure.iam;
+package io.hlab.opencsp.infrastructure.iam;
 
 import java.util.List;
+
 
 /**
  * IAM 클라이언트 인터페이스
@@ -8,7 +9,7 @@ import java.util.List;
  * 
  * <h3>구현체</h3>
  * <ul>
- *   <li>{@link io.hlab.OpenConsole.infrastructure.iam.zitadel.ZitadelClient}: Zitadel 구현체</li>
+ *   <li>{@link io.hlab.opencsp.infrastructure.iam.zitadel.ZitadelClient}: Zitadel 구현체</li>
  * </ul>
  * 
  * <h3>사용 예시</h3>
@@ -38,9 +39,9 @@ import java.util.List;
  *   <li>블랙리스트 기능: {@code IamTokenBlacklistClient} 인터페이스로 분리 예정</li>
  * </ul>
  * 
- * @see io.hlab.OpenConsole.infrastructure.iam.zitadel.ZitadelClient
- * @see io.hlab.OpenConsole.infrastructure.iam.IamException
- * @see io.hlab.OpenConsole.infrastructure.iam.IamRole
+ * @see io.hlab.opencsp.infrastructure.iam.zitadel.ZitadelClient
+ * @see io.hlab.opencsp.infrastructure.iam.IamException
+ * @see io.hlab.opencsp.infrastructure.iam.IamRole
  */
 public interface IamClient {
 
@@ -91,11 +92,20 @@ public interface IamClient {
 
     /**
      * Subject로 사용자의 email 조회
-     * 
+     *
      * @param subject IAM의 사용자 ID (subject)
      * @return 사용자 이메일
      * @throws IamException IAM API 호출 실패 시
      */
     String getUserEmailBySubject(String subject) throws IamException;
+
+    /**
+     * 사용자 목록 조회 (roles 포함)
+     *
+     * @param limit 최대 조회 수
+     * @return 사용자 목록 (subject, email, name, roles)
+     * @throws IamException IAM API 호출 실패 시
+     */
+    List<IamUserInfo> listUsers(int limit) throws IamException;
 }
 

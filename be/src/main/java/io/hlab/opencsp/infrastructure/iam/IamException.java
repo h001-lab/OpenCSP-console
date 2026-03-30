@@ -1,4 +1,4 @@
-package io.hlab.OpenConsole.infrastructure.iam;
+package io.hlab.opencsp.infrastructure.iam;
 
 /**
  * IAM 관련 예외
@@ -13,7 +13,7 @@ package io.hlab.OpenConsole.infrastructure.iam;
  *       로깅은 전역 예외 핸들러에서 수행하여 중복 로깅을 방지합니다.</li>
  *   <li><b>Application 레이어</b>: IamException을 그대로 전파합니다.</li>
  *   <li><b>API 레이어</b>: IamException을 처리하지 않고 그대로 전파합니다.
- *       전역 예외 핸들러({@link io.hlab.OpenConsole.common.exception.GlobalExceptionHandler})에서 처리됩니다.</li>
+ *       전역 예외 핸들러({@link io.hlab.opencsp.common.exception.GlobalExceptionHandler})에서 처리됩니다.</li>
  *   <li><b>예상치 못한 예외</b>: Infrastructure 레이어에서 Exception을 catch하여 로깅하고
  *       IamException으로 래핑하여 전파합니다.</li>
  * </ul>

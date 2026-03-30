@@ -1,11 +1,10 @@
-package io.hlab.OpenConsole.infrastructure.iam.zitadel;
+package io.hlab.opencsp.infrastructure.iam.zitadel;
 
-import io.hlab.OpenConsole.infrastructure.iam.IamRole;
-import io.hlab.OpenConsole.infrastructure.iam.IamTokenDecoder;
-import io.hlab.OpenConsole.infrastructure.iam.IamException;
-import io.hlab.OpenConsole.infrastructure.iam.IamUserInfo;
+import io.hlab.opencsp.infrastructure.iam.IamRole;
+import io.hlab.opencsp.infrastructure.iam.IamTokenDecoder;
+import io.hlab.opencsp.infrastructure.iam.IamException;
+import io.hlab.opencsp.infrastructure.iam.IamUserInfo;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -15,16 +14,13 @@ import java.util.Map;
 /**
  * Zitadel JWT 토큰 디코더 구현체
  * JWT 토큰을 디코딩하여 사용자 정보와 role을 추출
- * 
+ *
  * 실제 구현은 Spring Security OAuth2 Resource Server가 처리하지만,
  * 여기서는 토큰에서 role을 추출하는 로직을 제공
  */
 @Slf4j
-@Component
+@Component("zitadel-iam-decoder")
 public class ZitadelTokenDecoder implements IamTokenDecoder {
-
-    @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}")
-    private String issuerUri;
 
     @Override
     public IamUserInfo decode(String token) throws IamException {

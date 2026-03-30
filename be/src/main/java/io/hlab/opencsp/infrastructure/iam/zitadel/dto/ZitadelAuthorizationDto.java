@@ -1,4 +1,4 @@
-package io.hlab.OpenConsole.infrastructure.iam.zitadel.dto;
+package io.hlab.opencsp.infrastructure.iam.zitadel.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -15,10 +15,11 @@ public class ZitadelAuthorizationDto {
 
     // ==================== ListAuthorizations ====================
     
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public record ListRequest(
             PaginationRequest pagination,
             @JsonProperty("sortingColumn") AuthorizationFieldName sortingColumn,
-            List<AuthorizationsSearchFilter> filters
+            @JsonProperty("queries") List<AuthorizationsSearchFilter> filters
     ) {
         public record PaginationRequest(
                 Integer limit,
@@ -78,26 +79,34 @@ public class ZitadelAuthorizationDto {
         }
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record ListResponse(
-            PaginationResponse pagination,
+            @JsonIgnoreProperties(ignoreUnknown = true) PaginationResponse pagination,
             List<Authorization> authorizations
     ) {
+        @JsonIgnoreProperties(ignoreUnknown = true)
         public record PaginationResponse(
-                Integer limit,
-                Integer offset,
                 Long totalResult
         ) {}
 
+        /** 실제 Zitadel 응답 구조:
+         *  roles: [{"key":"admin","displayName":"admin","group":"admin"}]
+         *  user: {"id":"...", ...}
+         *  project/organization 는 nested object
+         */
+        @JsonIgnoreProperties(ignoreUnknown = true)
         public record Authorization(
                 String id,
-                @JsonProperty("userId") String userId,
-                @JsonProperty("projectId") String projectId,
-                @JsonProperty("organizationId") String organizationId,
-                @JsonProperty("roleKeys") List<String> roleKeys,
                 String state,
-                String creationDate,
-                String changeDate
-        ) {}
+                AuthorizationUser user,
+                List<AuthorizationRole> roles
+        ) {
+            @JsonIgnoreProperties(ignoreUnknown = true)
+            public record AuthorizationUser(String id) {}
+
+            @JsonIgnoreProperties(ignoreUnknown = true)
+            public record AuthorizationRole(String key) {}
+        }
     }
 
     // ==================== CreateAuthorization ====================

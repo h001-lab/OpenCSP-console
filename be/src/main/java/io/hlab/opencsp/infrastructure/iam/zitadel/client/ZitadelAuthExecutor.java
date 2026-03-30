@@ -1,10 +1,13 @@
-package io.hlab.OpenConsole.infrastructure.iam.zitadel.client;
+package io.hlab.opencsp.infrastructure.iam.zitadel.client;
 
-import io.hlab.OpenConsole.infrastructure.iam.IamException;
-import io.hlab.OpenConsole.infrastructure.iam.zitadel.dto.ZitadelAuthorizationDto;
+import io.hlab.opencsp.domain.config.ConfigCategory;
+import io.hlab.opencsp.infrastructure.config.ConfigStore;
+import io.hlab.opencsp.infrastructure.iam.IamException;
+import io.hlab.opencsp.infrastructure.iam.zitadel.dto.ZitadelAuthorizationDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
@@ -22,37 +25,52 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ZitadelAuthExecutor {
 
-    @Value("${zitadel.domain}")
-    private String zitadelDomain;
-
-    @Value("${zitadel.org-id}")
-    private String orgId;
-
-    @Value("${zitadel.project-id}")
-    private String projectId;
-
-    @Value("${zitadel.api-token}")
-    private String apiToken;
-
+    private final ConfigStore configStore;
     private final WebClient.Builder webClientBuilder;
+
+    // --- ConfigStore 헬퍼 (호출 시점마다 최신 DB 값 반영) ---
+
+    private String issuerUri() {
+        return configStore.get(ConfigCategory.IAM, "zitadel.issuer-uri", "");
+    }
+
+    private String apiToken() {
+        return configStore.get(ConfigCategory.IAM, "zitadel.service-token", "");
+    }
+
+    private String orgId() {
+        return configStore.get(ConfigCategory.IAM, "zitadel.org-id", "");
+    }
+
+    private String projectId() {
+        return configStore.get(ConfigCategory.IAM, "zitadel.project-id", "");
+    }
 
     /**
      * WebClient 인스턴스 생성 (공통 헤더 설정)
      */
     private WebClient createWebClient() {
-        // domain이 null이거나 빈 문자열인 경우 처리
-        if (zitadelDomain == null || zitadelDomain.isBlank()) {
-            throw new IllegalStateException("zitadel.domain이 설정되지 않았습니다. application.yaml 또는 환경 변수를 확인하세요.");
+        String issuerUri = issuerUri();
+        if (issuerUri.isBlank()) {
+            throw new IamException("zitadel.issuer-uri가 설정되지 않았습니다. Admin UI 또는 환경 변수를 확인하세요.");
         }
-        
-        // domain에 프로토콜이 이미 포함되어 있으면 그대로 사용, 없으면 https:// 추가
-        String baseUrl = zitadelDomain.startsWith("http://") || zitadelDomain.startsWith("https://")
-                ? zitadelDomain
-                : "https://" + zitadelDomain;
-        
+        String baseUrl;
+        try {
+            java.net.URI uri = java.net.URI.create(issuerUri);
+            baseUrl = uri.getScheme() + "://" + uri.getAuthority();
+        } catch (Exception e) {
+            throw new IamException("zitadel.issuer-uri가 올바르지 않습니다: " + issuerUri);
+        }
+        String token = apiToken();
+        if (token.isBlank()) {
+            var auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth instanceof JwtAuthenticationToken jwtAuth) {
+                token = jwtAuth.getToken().getTokenValue();
+            }
+        }
         return webClientBuilder
                 .baseUrl(baseUrl)
-                .defaultHeader("Authorization", "Bearer " + apiToken)
+                .defaultHeader("Authorization", "Bearer " + token)
                 .defaultHeader("Content-Type", "application/json")
                 .defaultHeader("Connect-Protocol-Version", "1")
                 .build();
@@ -67,15 +85,15 @@ public class ZitadelAuthExecutor {
         
         ZitadelAuthorizationDto.CreateRequest request = new ZitadelAuthorizationDto.CreateRequest(
                 userId,
-                projectId,
-                orgId,
+                projectId(),
+                orgId(),
                 roleKeys
         );
 
         try {
             ZitadelAuthorizationDto.CreateResponse response = webClient.post()
                     .uri("/zitadel.authorization.v2.AuthorizationService/CreateAuthorization")
-                    .header("x-zitadel-orgid", this.orgId)
+                    .header("x-zitadel-orgid", orgId())
                     .bodyValue(request)
                     .retrieve()
                     .bodyToMono(ZitadelAuthorizationDto.CreateResponse.class)
@@ -104,7 +122,7 @@ public class ZitadelAuthExecutor {
         try {
             ZitadelAuthorizationDto.UpdateResponse response = webClient.post()
                     .uri("/zitadel.authorization.v2.AuthorizationService/UpdateAuthorization")
-                    .header("x-zitadel-orgid", this.orgId)
+                    .header("x-zitadel-orgid", orgId())
                     .bodyValue(request)
                     .retrieve()
                     .bodyToMono(ZitadelAuthorizationDto.UpdateResponse.class)
@@ -120,48 +138,33 @@ public class ZitadelAuthExecutor {
     }
 
     /**
-     * Zitadel Authorization 목록 조회 (ListAuthorizations)
+     * Zitadel Authorization 전체 목록 조회 (ListAuthorizations)
+     * inUserIds 필터가 Zitadel에서 무시되는 문제로 인해 전체 조회 후 Java에서 필터링
      */
-    public ZitadelAuthorizationDto.ListResponse listAuthorizations(String userId) throws IamException {
+    public ZitadelAuthorizationDto.ListResponse listAllAuthorizations() throws IamException {
         WebClient webClient = createWebClient();
-        
-        ZitadelAuthorizationDto.ListRequest.PaginationRequest pagination = 
-                new ZitadelAuthorizationDto.ListRequest.PaginationRequest(100, null, true);
-        
-        ZitadelAuthorizationDto.ListRequest.AuthorizationsSearchFilter.InUserIdsFilter inUserIdsFilter = 
-                new ZitadelAuthorizationDto.ListRequest.AuthorizationsSearchFilter.InUserIdsFilter(List.of(userId));
-        
-        ZitadelAuthorizationDto.ListRequest.AuthorizationsSearchFilter.ProjectIdFilter projectIdFilter = 
-                new ZitadelAuthorizationDto.ListRequest.AuthorizationsSearchFilter.ProjectIdFilter(projectId);
-        
-        ZitadelAuthorizationDto.ListRequest.AuthorizationsSearchFilter.OrganizationIdFilter orgIdFilter = 
-                new ZitadelAuthorizationDto.ListRequest.AuthorizationsSearchFilter.OrganizationIdFilter(orgId);
-        
-        ZitadelAuthorizationDto.ListRequest.AuthorizationsSearchFilter filter1 = 
-                new ZitadelAuthorizationDto.ListRequest.AuthorizationsSearchFilter(
-                        null, inUserIdsFilter, null, null, projectIdFilter, null, null, null, null, null, null);
-        
-        ZitadelAuthorizationDto.ListRequest.AuthorizationsSearchFilter filter2 = 
-                new ZitadelAuthorizationDto.ListRequest.AuthorizationsSearchFilter(
-                        null, null, orgIdFilter, null, null, null, null, null, null, null, null);
-        
+
+        ZitadelAuthorizationDto.ListRequest.PaginationRequest pagination =
+                new ZitadelAuthorizationDto.ListRequest.PaginationRequest(1000, null, true);
+
         ZitadelAuthorizationDto.ListRequest request = new ZitadelAuthorizationDto.ListRequest(
                 pagination,
-                ZitadelAuthorizationDto.ListRequest.AuthorizationFieldName.AUTHORIZATION_FIELD_NAME_UNSPECIFIED,
-                List.of(filter1, filter2)
+                null,
+                null
         );
 
         try {
-            return webClient.post()
+            ZitadelAuthorizationDto.ListResponse response = webClient.post()
                     .uri("/zitadel.authorization.v2.AuthorizationService/ListAuthorizations")
-                    .header("x-zitadel-orgid", this.orgId)
+                    .header("x-zitadel-orgid", orgId())
                     .bodyValue(request)
                     .retrieve()
                     .bodyToMono(ZitadelAuthorizationDto.ListResponse.class)
                     .block();
+            log.debug("Authorization 전체 목록 조회 완료: count={}", response != null && response.authorizations() != null ? response.authorizations().size() : 0);
+            return response;
         } catch (WebClientResponseException e) {
-            log.error("Authorization 목록 조회 실패: userId={}, status={}, body={}",
-                    userId, e.getStatusCode(), e.getResponseBodyAsString());
+            log.error("Authorization 목록 조회 실패: status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString());
             throw new IamException("Authorization 목록 조회 실패: " + e.getMessage(), e);
         }
     }
@@ -177,7 +180,7 @@ public class ZitadelAuthExecutor {
         try {
             ZitadelAuthorizationDto.DeleteResponse response = webClient.post()
                     .uri("/zitadel.authorization.v2.AuthorizationService/DeleteAuthorization")
-                    .header("x-zitadel-orgid", this.orgId)
+                    .header("x-zitadel-orgid", orgId())
                     .bodyValue(request)
                     .retrieve()
                     .bodyToMono(ZitadelAuthorizationDto.DeleteResponse.class)
@@ -203,7 +206,7 @@ public class ZitadelAuthExecutor {
         try {
             ZitadelAuthorizationDto.ActivateResponse response = webClient.post()
                     .uri("/zitadel.authorization.v2.AuthorizationService/ActivateAuthorization")
-                    .header("x-zitadel-orgid", this.orgId)
+                    .header("x-zitadel-orgid", orgId())
                     .bodyValue(request)
                     .retrieve()
                     .bodyToMono(ZitadelAuthorizationDto.ActivateResponse.class)
@@ -229,7 +232,7 @@ public class ZitadelAuthExecutor {
         try {
             ZitadelAuthorizationDto.DeactivateResponse response = webClient.post()
                     .uri("/zitadel.authorization.v2.AuthorizationService/DeactivateAuthorization")
-                    .header("x-zitadel-orgid", this.orgId)
+                    .header("x-zitadel-orgid", orgId())
                     .bodyValue(request)
                     .retrieve()
                     .bodyToMono(ZitadelAuthorizationDto.DeactivateResponse.class)
