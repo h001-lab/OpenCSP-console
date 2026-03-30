@@ -1,117 +1,902 @@
 "use client";
 
+import React, { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
+import { useSearchParams } from "next/navigation";
 import Layout from "@/components/Layout/Layout";
+import { Button, Spinner, Tag, ConfirmModal } from "@h001/ui";
 import { useMsg } from "@/providers/MessagesProvider";
-import { Button, DenseTable, EnhancedTable, FormModal } from "@h001/ui";
-import { useState } from "react";
-import { Column } from "@/components/types";
+import { useAuthStore } from "@/stores/authStore";
 
-interface InstancesPageMessage {
-	title: string;
+const TerminalOverlay = dynamic(() => import("@/components/Console/TerminalOverlay"), { ssr: false });
+
+// ─── 타입 ───────────────────────────────────────────────────────────────────
+
+interface K8sCondition {
+  type: string;
+  status: string;
+  reason?: string;
+  message?: string;
 }
 
-import { useSyncExternalStore } from "react";
-
-const useHash = () => {
-	return useSyncExternalStore(
-		(callback) => {
-			window.addEventListener("hashchange", callback);
-			return () => window.removeEventListener("hashchange", callback);
-		},
-		() => window.location.hash.replace("#", ""),
-		() => ""
-	);
-};
-
-interface DummyInstance {
-	name: string;
-	version: string;
-	arch: string;
+interface ProvisionSummary {
+  id: number;
+  crName: string;
+  moduleType: string;
+  userId: string;
+  vmId: number | null;
+  proxmoxNode: string | null;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  liveStatus?: { conditions?: K8sCondition[] } | null;
 }
 
-const dummyInstanceColumns: Column<DummyInstance>[] = [
-	{ key: "name", label: "이미지 이름", width: "40%" },
-	{ key: "version", label: "버전", width: "30%" },
-	{ key: "arch", label: "아키텍처", width: "30%" },
-];
+interface HistoryEntry {
+  id: number;
+  crName: string;
+  userId: string;
+  moduleType: string;
+  action: string;
+  fromStatus: string | null;
+  toStatus: string | null;
+  detail: string | null;
+  createdAt: string;
+}
 
-const dummyInstanceData: DummyInstance[] = [
-	{ name: "Ubuntu Server", version: "22.04 LTS", arch: "x86_64" },
-	{ name: "CentOS Stream", version: "9", arch: "x86_64" },
-	{ name: "Rocky Linux", version: "9.3", arch: "arm64" },
-	{ name: "Debian", version: "12 (Bookworm)", arch: "x86_64" },
-	{ name: "Fedora Cloud", version: "39", arch: "x86_64" },
-];
+interface InstancesMessages {
+  intro: {
+    title: string;
+    description: string;
+    features: { title: string; desc: string }[];
+    viewList: string;
+    loginRequired: string;
+  };
+  create: {
+    backToList: string;
+    title: string;
+    description: string;
+    sections: { basic: string; resources: string; network: string };
+    fields: {
+      vmName: string; vmId: string; cpu: string; memory: string; disk: string;
+      ipConfig: string; dhcp: string; staticIp: string; ipAddress: string; gateway: string;
+    };
+    submit: string;
+    submitting: string;
+    cancel: string;
+    errors: { vmName: string; ipAddress: string; gateway: string };
+    failed: string;
+  };
+  list: {
+    title: string;
+    description: string;
+    refresh: string;
+    add: string;
+    deleteSelected: string;
+    tabs: { active: string; history: string };
+    loading: string;
+    search: string;
+    perPage: string;
+    empty: { noData: string; noResults: string };
+    columns: { vmId: string; user: string; crName: string; node: string; created: string; updated: string; status: string };
+    deleteFailed: string;
+    pageInfo: string;
+  };
+  detail: {
+    backToList: string;
+    fields: { vmId: string; crName: string; moduleType: string; node: string; userId: string; status: string; createdAt: string; updatedAt: string };
+    actions: { console: string; edit: string; stop: string; delete: string };
+    notReady: string;
+    deleteFailed: string;
+    terraformError: string;
+    terraformHint: string;
+    deleteConfirm: { title: string; messageSingle: string; messageMulti: string; deleting: string; confirm: string; cancel: string };
+  };
+}
 
-const InstancesView = ({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) => (
-	<div className="p-4 bg-gray-50 border border-blue-200 rounded">
-		<div className="flex justify-end p-4">
-			<Button variant="default" onClick={() => setOpen(true)}>
-				인스턴스 추가
-			</Button>
-			<FormModal
-				title="인스턴스 추가"
-				open={open}
-				onSubmit={() => setOpen(false)}
-				onCancel={() => setOpen(false)}
-			>
-				<div className="flex flex-col gap-4 items-center">
-					<DenseTable<DummyInstance> data={dummyInstanceData} columns={dummyInstanceColumns} />
-				</div>
-			</FormModal>
-		</div>
-		<EnhancedTable
-			title="인스턴스 목록"
-			headCells={[
-				{ id: "name", label: "인스턴스 이름", numeric: false, disablePadding: false },
-				{ id: "status", label: "상태", numeric: false, disablePadding: false },
-				{ id: "type", label: "인스턴스 유형", numeric: false, disablePadding: false },
-				{ id: "ip", label: "IP 주소", numeric: false, disablePadding: false },
-			]}
-			rows={[
-				{ id: 1, name: "web-prod-01", status: "Running", type: "c5.xlarge", ip: "54.123.45.67" },
-				{ id: 2, name: "web-prod-02", status: "Running", type: "c5.xlarge", ip: "54.123.45.68" },
-				{ id: 3, name: "db-primary", status: "Running", type: "m5.2xlarge", ip: "10.0.1.10" },
-				{ id: 4, name: "db-replica-01", status: "Running", type: "m5.2xlarge", ip: "10.0.1.11" },
-				{ id: 5, name: "redis-cache", status: "Running", type: "t3.medium", ip: "10.0.2.5" },
-				{ id: 6, name: "bastion-host", status: "Running", type: "t3.nano", ip: "3.34.56.78" },
-				{ id: 7, name: "jenkins-ci", status: "Stopped", type: "t3.large", ip: "52.78.12.34" },
-				{ id: 8, name: "staging-api", status: "Running", type: "t3.medium", ip: "13.124.5.6" },
-				{ id: 9, name: "monitoring-node", status: "Running", type: "t3.medium", ip: "13.125.6.7" },
-				{ id: 10, name: "ml-training-01", status: "Stopped", type: "g4dn.xlarge", ip: "54.192.3.4" },
-				{ id: 11, name: "worker-node-01", status: "Running", type: "c5.2xlarge", ip: "192.168.1.101" },
-				{ id: 12, name: "worker-node-02", status: "Running", type: "c5.2xlarge", ip: "192.168.1.102" },
-				{ id: 13, name: "worker-node-03", status: "Running", type: "c5.2xlarge", ip: "192.168.1.103" },
-				{ id: 14, name: "test-env-01", status: "Terminated", type: "t2.micro", ip: "-" },
-				{ id: 15, name: "backup-server", status: "Running", type: "m5.large", ip: "10.0.5.20" },
-			]}
-		/>
-	</div>
-);
+function extractErrorMessage(p: ProvisionSummary): string | null {
+  const conditions = p.liveStatus?.conditions;
+  if (!conditions) return null;
+  const failed = conditions.find((c) => c.type === "Ready" && c.status === "False");
+  return failed?.message ?? failed?.reason ?? null;
+}
 
-const SettingsView = () => (
-	<div className="p-4 bg-gray-50 border border-gray-200 rounded">
-		<h2 className="text-xl font-bold">설정</h2>
-		<p>계정 및 앱 설정을 하는 곳입니다.</p>
-	</div>
-);
+// ─── 히스토리 테이블 ──────────────────────────────────────────────────────
+function HistoryTable({ entries }: { entries: HistoryEntry[] }) {
+  const t = (useMsg("Instances") as unknown as InstancesMessages | undefined)?.list;
+  const [search, setSearch] = useState("");
+  const [page, setPage]     = useState(0);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const pageSize = 20;
 
-export default function Page() {
-	const [open, setOpen] = useState(false);
-	const hash = useHash();
-	const t = useMsg("Instances") as unknown as InstancesPageMessage;
-	if (!t) return null;
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    const list = entries.filter((e) =>
+      [e.crName, e.userId, e.action, e.fromStatus ?? "", e.toStatus ?? ""].some((v) => v.toLowerCase().includes(q))
+    );
+    list.sort((a, b) => {
+      const diff = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      return sortDir === "asc" ? diff : -diff;
+    });
+    return list;
+  }, [entries, search, sortDir]);
 
-	const activeTab = hash || "instances";
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage   = Math.min(page, totalPages - 1);
+  const paged      = filtered.slice(safePage * pageSize, (safePage + 1) * pageSize);
 
-	return (
-		<Layout navDomain="Nav" sidebarDomain="Instances">
-			<main className="p-6 gap-6">
-				<div className="mb-6">
-					{activeTab === "instances" && <InstancesView open={open} setOpen={setOpen} />}
-					{activeTab === "settings" && <SettingsView />}
-				</div>
-			</main>
-		</Layout>
-	);
+  if (!t) return null;
+
+  function actionBadge(action: string) {
+    const cls = action === "CREATED"
+      ? "bg-green-50 text-green-700 border-green-200"
+      : "bg-blue-50 text-blue-700 border-blue-200";
+    return <span className={`text-xs border px-1.5 py-0.5 rounded font-mono ${cls}`}>{action}</span>;
+  }
+
+  function statusBadge(s: string | null) {
+    if (!s) return <span className="text-gray-300">—</span>;
+    const cls = s === "APPLIED" ? "text-green-700" : s === "FAILED" ? "text-red-600" : s === "DESTROYED" ? "text-gray-500" : "text-yellow-700";
+    return <span className={`font-mono text-xs ${cls}`}>{s}</span>;
+  }
+
+  return (
+    <div className="bg-white rounded-lg border overflow-hidden">
+      <div className="px-4 py-3 border-b bg-gray-50">
+        <input type="text" placeholder={t.search}
+          className="w-full max-w-sm border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+          value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} />
+      </div>
+
+      {paged.length === 0 ? (
+        <div className="text-center py-12 text-sm text-gray-400">
+          {entries.length === 0 ? t.empty.noData : t.empty.noResults}
+        </div>
+      ) : (
+        <>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-xs text-gray-500 border-b bg-gray-50/50">
+                <th className="text-left px-4 py-2 font-medium">{t.columns.crName}</th>
+                <th className="text-left px-4 py-2 font-medium">{t.columns.user}</th>
+                <th className="text-left px-4 py-2 font-medium">Action</th>
+                <th className="text-left px-4 py-2 font-medium">From</th>
+                <th className="text-left px-4 py-2 font-medium">To</th>
+                <th className="text-left px-4 py-2 font-medium">Detail</th>
+                <th className="text-left px-4 py-2 font-medium">
+                  <button
+                    onClick={() => { setSortDir((d) => d === "asc" ? "desc" : "asc"); setPage(0); }}
+                    className="flex items-center gap-1 hover:text-gray-800 transition-colors"
+                  >
+                    {t.columns.created}
+                    <span className="text-gray-400">{sortDir === "asc" ? "↑" : "↓"}</span>
+                  </button>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {paged.map((e) => (
+                <tr key={e.id} className="border-b last:border-b-0 hover:bg-gray-50/30">
+                  <td className="px-4 py-2.5 font-mono text-xs text-gray-700">{e.crName}</td>
+                  <td className="px-4 py-2.5 text-xs text-gray-500 font-mono truncate max-w-28">{e.userId}</td>
+                  <td className="px-4 py-2.5">{actionBadge(e.action)}</td>
+                  <td className="px-4 py-2.5">{statusBadge(e.fromStatus)}</td>
+                  <td className="px-4 py-2.5">{statusBadge(e.toStatus)}</td>
+                  <td className="px-4 py-2.5 text-xs text-gray-400 max-w-48 truncate" title={e.detail ?? ""}>{e.detail ?? "—"}</td>
+                  <td className="px-4 py-2.5 text-xs text-gray-400 whitespace-nowrap">{new Date(e.createdAt).toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="px-4 py-2 border-t bg-gray-50 flex items-center justify-between text-xs text-gray-500">
+            <span>{t.pageInfo.replace("{from}", String(safePage * pageSize + 1)).replace("{to}", String(Math.min((safePage + 1) * pageSize, filtered.length))).replace("{total}", String(filtered.length))}</span>
+            <div className="flex items-center gap-1">
+              <button className="px-2 py-1 rounded hover:bg-gray-200 disabled:opacity-30" disabled={safePage === 0} onClick={() => setPage(0)}>«</button>
+              <button className="px-2 py-1 rounded hover:bg-gray-200 disabled:opacity-30" disabled={safePage === 0} onClick={() => setPage((p) => p - 1)}>‹</button>
+              <span className="px-2">{safePage + 1} / {totalPages}</span>
+              <button className="px-2 py-1 rounded hover:bg-gray-200 disabled:opacity-30" disabled={safePage >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>›</button>
+              <button className="px-2 py-1 rounded hover:bg-gray-200 disabled:opacity-30" disabled={safePage >= totalPages - 1} onClick={() => setPage(totalPages - 1)}>»</button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+type SortKey = keyof Pick<ProvisionSummary, "vmId" | "userId" | "crName" | "proxmoxNode" | "updatedAt" | "createdAt">;
+type SortDir = "asc" | "desc";
+type TagType = "success" | "warning" | "error" | "info";
+type IpMode  = "dhcp" | "static";
+type Tab     = "active" | "history";
+
+function statusTagType(status?: string): TagType {
+  switch (status) {
+    case "APPLIED":                      return "success";
+    case "APPLYING": case "PENDING":     return "warning";
+    case "FAILED":                       return "error";
+    case "DESTROYING": case "DESTROYED": return "info";
+    default:                             return "info";
+  }
+}
+
+const DEFAULT_MODULE_TYPE = "proxmox-vm";
+const DEFAULT_GIT_REPO    = "flux-system";
+const PAGE_SIZE_OPTIONS   = [5, 10, 25];
+
+// ─── VM 폼 ────────────────────────────────────────────────────────────────
+
+function ProvisionCreateView({ onBack, onCreated }: { onBack: () => void; onCreated: () => void }) {
+  const t = (useMsg("Instances") as unknown as InstancesMessages | undefined)?.create;
+  const [submitting, setSubmitting] = useState(false);
+  const [vars, setVars] = useState<Record<string, string>>({});
+  const [ipMode, setIpMode] = useState<IpMode>("dhcp");
+
+  useEffect(() => {
+    setVars({});
+    setIpMode("dhcp");
+    fetch("/api/provisions/next-vm-id")
+      .then((r) => r.json())
+      .then((json) => {
+        const id = String(json.data ?? "");
+        setVars({ vm_id: id, vm_name: id ? `vm-${id}` : "" });
+      })
+      .catch(() => {});
+  }, []);
+
+  if (!t) return null;
+
+  function field(key: string) {
+    return {
+      value: vars[key] ?? "",
+      onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
+        setVars((v) => ({ ...v, [key]: e.target.value })),
+    };
+  }
+
+  async function handleSubmit() {
+    if (!vars["vm_name"]?.trim()) { alert(t!.errors.vmName); return; }
+    if (ipMode === "static") {
+      if (!vars["vm_ip"]?.trim())  { alert(t!.errors.ipAddress); return; }
+      if (!vars["vm_gw"]?.trim())  { alert(t!.errors.gateway);   return; }
+    }
+    setSubmitting(true);
+    try {
+      const vmFields = [
+        { key: "vm_name",      type: "text",   defaultValue: "" },
+        { key: "vm_id",        type: "number", defaultValue: "" },
+        { key: "vm_cpu",       type: "number", defaultValue: "2" },
+        { key: "vm_memory",    type: "number", defaultValue: "2048" },
+        { key: "vm_disk_size", type: "number", defaultValue: "20" },
+      ];
+      const builtVars: Record<string, string | number> = {};
+      for (const f of vmFields) {
+        const val = vars[f.key] ?? f.defaultValue ?? "";
+        builtVars[f.key] = f.type === "number" ? Number(val) : val;
+      }
+      if (ipMode === "static") {
+        builtVars["vm_ip"] = vars["vm_ip"]?.trim() ?? "";
+        builtVars["vm_gw"] = vars["vm_gw"]?.trim() ?? "";
+      }
+      const res = await fetch("/api/provisions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ moduleType: DEFAULT_MODULE_TYPE, gitRepositoryName: DEFAULT_GIT_REPO, vars: builtVars }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        alert(json.message ?? t!.failed);
+        return;
+      }
+      onCreated();
+      onBack();
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const inputCls = "w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500";
+  const labelCls = "block text-xs font-medium text-gray-600 mb-1";
+
+  return (
+    <div>
+      <button onClick={onBack}
+        className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 mb-6 transition-colors">
+        {t.backToList}
+      </button>
+
+      <div className="mb-6">
+        <h3 className="font-semibold text-gray-800 text-lg">{t.title}</h3>
+        <p className="text-xs text-gray-500 mt-0.5">{t.description}</p>
+      </div>
+
+      <div className="bg-white rounded-lg border overflow-hidden mb-4">
+        <div className="px-5 py-3 border-b bg-gray-50">
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{t.sections.basic}</p>
+        </div>
+        <div className="px-5 py-4 grid grid-cols-2 gap-4">
+          <div>
+            <label className={labelCls}>{t.fields.vmName} <span className="text-red-500">*</span></label>
+            <input type="text" className={inputCls} placeholder="my-vm" {...field("vm_name")} />
+          </div>
+          <div>
+            <label className={labelCls}>{t.fields.vmId} <span className="text-red-500">*</span></label>
+            <input type="number" className={inputCls} {...field("vm_id")} />
+          </div>
+        </div>
+
+        <div className="px-5 py-3 border-t border-b bg-gray-50">
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{t.sections.resources}</p>
+        </div>
+        <div className="px-5 py-4 grid grid-cols-3 gap-4">
+          <div>
+            <label className={labelCls}>{t.fields.cpu}</label>
+            <input type="number" className={inputCls} placeholder="2" {...field("vm_cpu")} />
+          </div>
+          <div>
+            <label className={labelCls}>{t.fields.memory}</label>
+            <input type="number" className={inputCls} placeholder="2048" {...field("vm_memory")} />
+          </div>
+          <div>
+            <label className={labelCls}>{t.fields.disk}</label>
+            <input type="number" className={inputCls} placeholder="20" {...field("vm_disk_size")} />
+          </div>
+        </div>
+
+        <div className="px-5 py-3 border-t border-b bg-gray-50">
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{t.sections.network}</p>
+        </div>
+        <div className="px-5 py-4">
+          <label className={labelCls}>{t.fields.ipConfig}</label>
+          <div className="flex gap-2 mb-3 w-48">
+            {(["dhcp", "static"] as IpMode[]).map((mode) => (
+              <button key={mode} type="button" onClick={() => setIpMode(mode)}
+                className={`flex-1 py-1.5 text-xs rounded border transition-colors ${
+                  ipMode === mode
+                    ? "bg-gray-800 text-white border-gray-800"
+                    : "bg-white text-gray-600 border-gray-300 hover:border-gray-400"
+                }`}>
+                {mode === "dhcp" ? t.fields.dhcp : t.fields.staticIp}
+              </button>
+            ))}
+          </div>
+          {ipMode === "static" && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelCls}>{t.fields.ipAddress} <span className="text-red-500">*</span></label>
+                <input type="text" className={inputCls} placeholder="192.168.1.100/24" {...field("vm_ip")} />
+              </div>
+              <div>
+                <label className={labelCls}>{t.fields.gateway} <span className="text-red-500">*</span></label>
+                <input type="text" className={inputCls} placeholder="192.168.1.1" {...field("vm_gw")} />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Button variant="default" size="sm" onClick={handleSubmit} disabled={submitting}>
+          {submitting ? t.submitting : t.submit}
+        </Button>
+        <Button variant="outline" size="sm" onClick={onBack} disabled={submitting}>
+          {t.cancel}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ─── 소개 뷰 ───────────────────────────────────────────────────────────────
+
+function IntroView({ isAuthenticated }: { isAuthenticated: boolean }) {
+  const t = (useMsg("Instances") as unknown as InstancesMessages | undefined)?.intro;
+  if (!t) return null;
+
+  return (
+    <div className="flex flex-col items-center justify-center py-24 px-6 text-center">
+      <div className="max-w-lg">
+        <h2 className="text-2xl font-bold text-gray-800 mb-3">{t.title}</h2>
+        <p className="text-gray-500 text-sm leading-relaxed mb-6 whitespace-pre-line">{t.description}</p>
+        <div className="grid grid-cols-3 gap-4 mb-8 text-left">
+          {t.features.map((item) => (
+            <div key={item.title} className="bg-gray-50 rounded-lg p-3 border">
+              <div className="text-xs font-semibold text-gray-700 mb-0.5">{item.title}</div>
+              <div className="text-xs text-gray-500">{item.desc}</div>
+            </div>
+          ))}
+        </div>
+        {isAuthenticated ? (
+          <a
+            href="?view=list"
+            className="inline-block px-5 py-2 text-sm bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors"
+          >
+            {t.viewList}
+          </a>
+        ) : (
+          <p className="text-sm text-gray-400">{t.loginRequired}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── 디테일 뷰 ────────────────────────────────────────────────────────────
+
+function InstanceDetail({
+  provision,
+  onBack,
+  onDeleted,
+}: {
+  provision: ProvisionSummary;
+  onBack: () => void;
+  onDeleted: () => void;
+}) {
+  const t = (useMsg("Instances") as unknown as InstancesMessages | undefined)?.detail;
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting]           = useState(false);
+  const [consoleOpen, setConsoleOpen]     = useState(false);
+
+  if (!t) return null;
+
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      await fetch(`/api/provisions/${provision.crName}`, { method: "DELETE" });
+      setConfirmDelete(false);
+      onDeleted();
+    } catch {
+      alert(t!.deleteFailed);
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  const isActive     = !["DESTROYING", "DESTROYED"].includes(provision.status);
+  const isFailed     = provision.status === "FAILED";
+  const errorMessage = extractErrorMessage(provision);
+
+  const fields: { label: string; value: React.ReactNode }[] = [
+    { label: t.fields.vmId,        value: provision.vmId ?? "-" },
+    { label: t.fields.crName,      value: <span className="font-mono text-xs">{provision.crName}</span> },
+    { label: t.fields.moduleType,  value: provision.moduleType },
+    { label: t.fields.node,        value: provision.proxmoxNode ?? "-" },
+    { label: t.fields.userId,      value: <span className="font-mono text-xs">{provision.userId}</span> },
+    { label: t.fields.status,      value: <Tag type={statusTagType(provision.status)}>{provision.status}</Tag> },
+    { label: t.fields.createdAt,   value: new Date(provision.createdAt).toLocaleString() },
+    { label: t.fields.updatedAt,   value: new Date(provision.updatedAt).toLocaleString() },
+  ];
+
+  return (
+    <div>
+      <button onClick={onBack}
+        className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 mb-6 transition-colors">
+        {t.backToList}
+      </button>
+
+      {isFailed && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+          <div className="flex items-center gap-2 mb-1">
+            <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+            </svg>
+            <span className="text-sm font-medium text-red-700">{t.terraformError}</span>
+          </div>
+          {errorMessage && (
+            <pre className="mt-2 text-xs text-red-600 bg-red-100 rounded p-3 overflow-x-auto whitespace-pre-wrap wrap-break-word">
+              {errorMessage}
+            </pre>
+          )}
+          <p className="text-xs text-red-500 mt-2">{t.terraformHint}</p>
+        </div>
+      )}
+
+      <div className="bg-white rounded-lg border overflow-hidden mb-4">
+        <div className="px-5 py-4 border-b bg-gray-50 flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold text-gray-800 font-mono text-sm">{provision.crName}</h3>
+            <p className="text-xs text-gray-500 mt-0.5">{provision.moduleType}</p>
+          </div>
+          <Tag type={statusTagType(provision.status)}>{provision.status}</Tag>
+        </div>
+        <dl className="divide-y">
+          {fields.map(({ label, value }) => (
+            <div key={label} className="px-5 py-3 flex items-center gap-4">
+              <dt className="text-xs text-gray-500 w-32 shrink-0">{label}</dt>
+              <dd className="text-sm text-gray-800">{value}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Button variant="default" size="sm" disabled={provision.status !== "APPLIED"} onClick={() => setConsoleOpen(true)}>
+          {t.actions.console}
+        </Button>
+        <Button variant="outline" size="sm" disabled={!isActive} onClick={() => alert(t.notReady)}>
+          {t.actions.edit}
+        </Button>
+        <Button variant="outline" size="sm" disabled={!isActive} onClick={() => alert(t.notReady)}>
+          {t.actions.stop}
+        </Button>
+        <Button variant="destructive" size="sm" disabled={!isActive} onClick={() => setConfirmDelete(true)}>
+          {t.actions.delete}
+        </Button>
+      </div>
+
+      {consoleOpen && (
+        <TerminalOverlay crName={provision.crName} login="root" onClose={() => setConsoleOpen(false)} />
+      )}
+
+      <ConfirmModal
+        open={confirmDelete}
+        title={t.deleteConfirm.title}
+        message={t.deleteConfirm.messageSingle.replace("{name}", provision.crName)}
+        confirmText={deleting ? t.deleteConfirm.deleting : t.deleteConfirm.confirm}
+        cancelText={t.deleteConfirm.cancel}
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDelete(false)}
+      />
+    </div>
+  );
+}
+
+// ─── 인스턴스 테이블 ──────────────────────────────────────────────────────
+
+function InstanceTable({
+  provisions,
+  selected,
+  onSelectChange,
+  onRowClick,
+}: {
+  provisions: ProvisionSummary[];
+  selected: Set<string>;
+  onSelectChange: (next: Set<string>) => void;
+  onRowClick: (p: ProvisionSummary) => void;
+}) {
+  const t = (useMsg("Instances") as unknown as InstancesMessages | undefined)?.list;
+  const [search, setSearch]     = useState("");
+  const [sortKey, setSortKey]   = useState<SortKey>("updatedAt");
+  const [sortDir, setSortDir]   = useState<SortDir>("desc");
+  const [page, setPage]         = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    return provisions.filter((p) =>
+      [p.crName, p.userId, p.proxmoxNode ?? "", String(p.vmId ?? ""), p.status]
+        .some((v) => v.toLowerCase().includes(q))
+    );
+  }, [provisions, search]);
+
+  const sorted = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      const av = String(a[sortKey] ?? "");
+      const bv = String(b[sortKey] ?? "");
+      const cmp = av < bv ? -1 : av > bv ? 1 : 0;
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [filtered, sortKey, sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const safePage   = Math.min(page, totalPages - 1);
+  const paged      = sorted.slice(safePage * pageSize, (safePage + 1) * pageSize);
+
+  if (!t) return null;
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(key); setSortDir("asc"); }
+  }
+
+  const allPageSelected = paged.length > 0 && paged.every((p) => selected.has(p.crName));
+
+  function toggleAll() {
+    const next = new Set(selected);
+    if (allPageSelected) paged.forEach((p) => next.delete(p.crName));
+    else paged.forEach((p) => next.add(p.crName));
+    onSelectChange(next);
+  }
+
+  function toggleOne(crName: string) {
+    const next = new Set(selected);
+    if (next.has(crName)) next.delete(crName); else next.add(crName);
+    onSelectChange(next);
+  }
+
+  function sortIcon(key: SortKey) {
+    if (sortKey !== key) return <span className="text-gray-300 ml-1">↕</span>;
+    return <span className="text-blue-500 ml-1">{sortDir === "asc" ? "↑" : "↓"}</span>;
+  }
+
+  const COLUMNS: { key: SortKey; label: string }[] = [
+    { key: "vmId",        label: t.columns.vmId },
+    { key: "userId",      label: t.columns.user },
+    { key: "crName",      label: t.columns.crName },
+    { key: "proxmoxNode", label: t.columns.node },
+    { key: "createdAt",   label: t.columns.created },
+    { key: "updatedAt",   label: t.columns.updated },
+  ];
+
+  const from  = safePage * pageSize + 1;
+  const to    = Math.min((safePage + 1) * pageSize, filtered.length);
+  const total = filtered.length;
+
+  return (
+    <div className="bg-white rounded-lg border overflow-hidden">
+      <div className="px-4 py-3 border-b bg-gray-50 flex items-center gap-2">
+        <input type="text" placeholder={t.search}
+          className="flex-1 border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+          value={search}
+          onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+        />
+        <select className="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none"
+          value={pageSize}
+          onChange={(e) => { setPageSize(Number(e.target.value)); setPage(0); }}>
+          {PAGE_SIZE_OPTIONS.map((n) => (
+            <option key={n} value={n}>{t.perPage.replace("{count}", String(n))}</option>
+          ))}
+        </select>
+      </div>
+
+      {sorted.length === 0 ? (
+        <div className="text-center py-12 text-sm text-gray-400">
+          {provisions.length === 0 ? t.empty.noData : t.empty.noResults}
+        </div>
+      ) : (
+        <>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-xs text-gray-500 border-b bg-gray-50/50">
+                <th className="px-4 py-2 w-10">
+                  <input type="checkbox" checked={allPageSelected} onChange={toggleAll} />
+                </th>
+                {COLUMNS.map((col) => (
+                  <th key={col.key}
+                    className="text-left px-4 py-2 font-medium cursor-pointer select-none hover:text-gray-700"
+                    onClick={() => toggleSort(col.key)}>
+                    {col.label}{sortIcon(col.key)}
+                  </th>
+                ))}
+                <th className="text-left px-4 py-2 font-medium">{t.columns.status}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paged.map((item) => (
+                <tr key={item.crName}
+                  className="border-b last:border-b-0 hover:bg-blue-50/40 cursor-pointer"
+                  onClick={() => onRowClick(item)}>
+                  <td className="px-4 py-2.5" onClick={(e) => e.stopPropagation()}>
+                    <input type="checkbox" checked={selected.has(item.crName)}
+                      onChange={() => toggleOne(item.crName)} />
+                  </td>
+                  <td className="px-4 py-2.5 text-xs text-gray-600">{item.vmId ?? "-"}</td>
+                  <td className="px-4 py-2.5 text-xs text-gray-500 font-mono truncate max-w-28">{item.userId}</td>
+                  <td className="px-4 py-2.5 font-mono text-xs text-gray-700">{item.crName}</td>
+                  <td className="px-4 py-2.5 text-xs text-gray-600">{item.proxmoxNode ?? "-"}</td>
+                  <td className="px-4 py-2.5 text-xs text-gray-400">{new Date(item.createdAt).toLocaleString()}</td>
+                  <td className="px-4 py-2.5 text-xs text-gray-400">{new Date(item.updatedAt).toLocaleString()}</td>
+                  <td className="px-4 py-2.5">
+                    <div className="flex items-center gap-1.5">
+                      <Tag type={statusTagType(item.status)}>{item.status}</Tag>
+                      {item.status === "FAILED" && (
+                        <span title={extractErrorMessage(item) ?? "Terraform error"}>
+                          <svg className="w-3.5 h-3.5 text-red-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                              d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                          </svg>
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div className="px-4 py-2 border-t bg-gray-50 flex items-center justify-between text-xs text-gray-500">
+            <span>{t.pageInfo.replace("{from}", String(from)).replace("{to}", String(to)).replace("{total}", String(total))}</span>
+            <div className="flex items-center gap-1">
+              <button className="px-2 py-1 rounded hover:bg-gray-200 disabled:opacity-30" disabled={safePage === 0} onClick={() => setPage(0)}>«</button>
+              <button className="px-2 py-1 rounded hover:bg-gray-200 disabled:opacity-30" disabled={safePage === 0} onClick={() => setPage((p) => p - 1)}>‹</button>
+              <span className="px-2">{safePage + 1} / {totalPages}</span>
+              <button className="px-2 py-1 rounded hover:bg-gray-200 disabled:opacity-30" disabled={safePage >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>›</button>
+              <button className="px-2 py-1 rounded hover:bg-gray-200 disabled:opacity-30" disabled={safePage >= totalPages - 1} onClick={() => setPage(totalPages - 1)}>»</button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─── 메인 페이지 ───────────────────────────────────────────────────────────
+
+export default function InstancesPage() {
+  const instancesMsg = useMsg("Instances") as unknown as InstancesMessages | undefined;
+  const { isAuthenticated, isLoading: authLoading } = useAuthStore();
+
+  const searchParams = useSearchParams();
+  const showList = searchParams.get("view") === "list";
+
+  const [provisions, setProvisions]         = useState<ProvisionSummary[]>([]);
+  const [histories, setHistories]           = useState<HistoryEntry[]>([]);
+  const [loading, setLoading]               = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [error, setError]                   = useState<string | null>(null);
+  const [creating, setCreating]             = useState(false);
+  const [selected, setSelected]             = useState<Set<string>>(new Set());
+  const [confirmTargets, setConfirmTargets] = useState<string[]>([]);
+  const [deleting, setDeleting]             = useState(false);
+  const [detail, setDetail]                 = useState<ProvisionSummary | null>(null);
+  const [tab, setTab]                       = useState<Tab>("active");
+
+  const activeProvisions = useMemo(() => provisions.filter((p) => p.status !== "DESTROYED"), [provisions]);
+
+  useEffect(() => {
+    if (isAuthenticated) fetchProvisions();
+  }, [isAuthenticated]);
+
+  if (!instancesMsg) return null;
+
+  const tList   = instancesMsg.list;
+  const tDetail = instancesMsg.detail;
+
+  async function fetchProvisions() {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await fetch("/api/provisions");
+      const json = await res.json();
+      setProvisions(json.data ?? []);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unknown error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function fetchHistories() {
+    try {
+      setHistoryLoading(true);
+      const res = await fetch("/api/provisions/history");
+      const json = await res.json();
+      setHistories(json.data ?? []);
+    } catch {
+      // silently ignore
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
+  function handleTabChange(next: Tab) {
+    setTab(next);
+    setSelected(new Set());
+    if (next === "history") fetchHistories();
+  }
+
+  async function handleBulkDelete() {
+    setDeleting(true);
+    try {
+      await Promise.all(
+        confirmTargets.map((crName) => fetch(`/api/provisions/${crName}`, { method: "DELETE" }))
+      );
+      setConfirmTargets([]);
+      setSelected(new Set());
+      await fetchProvisions();
+    } catch {
+      alert(tList.deleteFailed);
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <Layout navDomain="Nav" sidebarDomain="Instances">
+      <main className="p-4 gap-4">
+        {!showList ? (
+          <IntroView isAuthenticated={isAuthenticated} />
+        ) : authLoading ? (
+          <div className="flex items-center justify-center py-24 gap-3">
+            <Spinner size="md" />
+          </div>
+        ) : !isAuthenticated ? (
+          <IntroView isAuthenticated={false} />
+        ) : creating ? (
+          <ProvisionCreateView
+            onBack={() => setCreating(false)}
+            onCreated={() => { fetchProvisions(); fetchHistories(); }}
+          />
+        ) : detail ? (
+          <InstanceDetail
+            provision={detail}
+            onBack={() => setDetail(null)}
+            onDeleted={() => { setDetail(null); fetchProvisions(); }}
+          />
+        ) : (
+          <>
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-700 mb-1">{tList.title}</h2>
+                <p className="text-xs text-gray-500">{tList.description}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                {selected.size > 0 && (
+                  <Button variant="destructive" size="sm" onClick={() => setConfirmTargets([...selected])}>
+                    {tList.deleteSelected.replace("{count}", String(selected.size))}
+                  </Button>
+                )}
+                <Button variant="outline" size="sm" onClick={() => { fetchProvisions(); if (tab === "history") fetchHistories(); }}>{tList.refresh}</Button>
+                <Button variant="default" size="sm" onClick={() => setCreating(true)}>{tList.add}</Button>
+              </div>
+            </div>
+
+            <div className="flex gap-1 mb-4 border-b">
+              {([["active", tList.tabs.active, activeProvisions.length], ["history", tList.tabs.history, histories.length]] as const).map(([key, label, count]) => (
+                <button key={key}
+                  className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                    tab === key
+                      ? "border-blue-500 text-blue-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700"
+                  }`}
+                  onClick={() => handleTabChange(key)}>
+                  {label}
+                  <span className="ml-1.5 text-xs text-gray-400">({count})</span>
+                </button>
+              ))}
+            </div>
+
+            {tab === "active" && (
+              <>
+                {loading && (
+                  <div className="flex items-center justify-center py-12 gap-3">
+                    <Spinner size="md" />
+                    <span className="text-sm text-gray-600">{tList.loading}</span>
+                  </div>
+                )}
+                {error && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 text-sm text-red-700">{error}</div>
+                )}
+                {!loading && !error && (
+                  <InstanceTable
+                    provisions={activeProvisions}
+                    selected={selected}
+                    onSelectChange={setSelected}
+                    onRowClick={setDetail}
+                  />
+                )}
+              </>
+            )}
+
+            {tab === "history" && (
+              <>
+                {historyLoading && (
+                  <div className="flex items-center justify-center py-12 gap-3">
+                    <Spinner size="md" />
+                    <span className="text-sm text-gray-600">{tList.loading}</span>
+                  </div>
+                )}
+                {!historyLoading && <HistoryTable entries={histories} />}
+              </>
+            )}
+          </>
+        )}
+      </main>
+
+      <ConfirmModal
+        open={confirmTargets.length > 0}
+        title={tDetail.deleteConfirm.title}
+        message={
+          confirmTargets.length === 1
+            ? tDetail.deleteConfirm.messageSingle.replace("{name}", confirmTargets[0])
+            : tDetail.deleteConfirm.messageMulti.replace("{count}", String(confirmTargets.length))
+        }
+        confirmText={deleting ? tDetail.deleteConfirm.deleting : tDetail.deleteConfirm.confirm}
+        cancelText={tDetail.deleteConfirm.cancel}
+        onConfirm={handleBulkDelete}
+        onCancel={() => setConfirmTargets([])}
+      />
+    </Layout>
+  );
 }

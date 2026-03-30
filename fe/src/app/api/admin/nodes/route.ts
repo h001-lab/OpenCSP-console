@@ -14,15 +14,14 @@ async function guardAdmin() {
 export async function GET(req: NextRequest) {
   const { error, status } = await guardAdmin();
   if (error) return NextResponse.json({ error }, { status });
-
-  const res = await callBackend("/api/admin/users", undefined, req);
+  const res = await callBackend("/api/admin/nodes", undefined, req);
   return NextResponse.json(await res.json(), { status: res.status });
 }
 
 export async function POST(req: NextRequest) {
   const { error, status } = await guardAdmin();
   if (error) return NextResponse.json({ error }, { status });
-
-  const res = await callBackend("/api/admin/users/sync", { method: "POST" }, req);
+  const body = await req.json();
+  const res = await callBackend("/api/admin/nodes", { method: "POST", body: JSON.stringify(body) }, req);
   return NextResponse.json(await res.json(), { status: res.status });
 }

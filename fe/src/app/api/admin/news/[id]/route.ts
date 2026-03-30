@@ -11,18 +11,20 @@ async function guardAdmin() {
   return { error: null, status: 200 };
 }
 
-export async function GET(req: NextRequest) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { error, status } = await guardAdmin();
   if (error) return NextResponse.json({ error }, { status });
-
-  const res = await callBackend("/api/admin/users", undefined, req);
+  const { id } = await params;
+  const body = await req.json();
+  const res = await callBackend(`/api/admin/news/${id}`, { method: "PUT", body: JSON.stringify(body) }, req);
   return NextResponse.json(await res.json(), { status: res.status });
 }
 
-export async function POST(req: NextRequest) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { error, status } = await guardAdmin();
   if (error) return NextResponse.json({ error }, { status });
-
-  const res = await callBackend("/api/admin/users/sync", { method: "POST" }, req);
+  const { id } = await params;
+  const res = await callBackend(`/api/admin/news/${id}`, { method: "DELETE" }, req);
+  if (res.status === 204) return new NextResponse(null, { status: 204 });
   return NextResponse.json(await res.json(), { status: res.status });
 }

@@ -11,18 +11,25 @@ async function guardAdmin() {
   return { error: null, status: 200 };
 }
 
-export async function GET(req: NextRequest) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ uuid: string }> }) {
   const { error, status } = await guardAdmin();
   if (error) return NextResponse.json({ error }, { status });
-
-  const res = await callBackend("/api/admin/users", undefined, req);
+  const { uuid } = await params;
+  const { searchParams } = new URL(req.url);
+  const nodeStatus = searchParams.get("status");
+  const res = await callBackend(
+    `/api/admin/nodes/${uuid}/status?status=${nodeStatus}`,
+    { method: "PATCH" },
+    req
+  );
   return NextResponse.json(await res.json(), { status: res.status });
 }
 
-export async function POST(req: NextRequest) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ uuid: string }> }) {
   const { error, status } = await guardAdmin();
   if (error) return NextResponse.json({ error }, { status });
-
-  const res = await callBackend("/api/admin/users/sync", { method: "POST" }, req);
+  const { uuid } = await params;
+  const res = await callBackend(`/api/admin/nodes/${uuid}`, { method: "DELETE" }, req);
+  if (res.status === 204) return new NextResponse(null, { status: 204 });
   return NextResponse.json(await res.json(), { status: res.status });
 }
