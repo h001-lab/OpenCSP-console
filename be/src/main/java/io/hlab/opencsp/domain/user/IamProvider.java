@@ -1,4 +1,4 @@
-package io.hlab.OpenConsole.domain.user;
+package io.hlab.opencsp.domain.user;
 
 public enum IamProvider {
     ZITADEL,

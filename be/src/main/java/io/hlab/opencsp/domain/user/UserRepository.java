@@ -1,5 +1,6 @@
-package io.hlab.OpenConsole.domain.user;
+package io.hlab.opencsp.domain.user;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface UserRepository {
@@ -8,6 +9,12 @@ public interface UserRepository {
     Optional<User> findById(Long id);
 
     Optional<User> findByEmail(String email);
+
+    Optional<User> findByIamSubject(String iamSubject);
+
+    List<User> findAll();
+
+    boolean existsById(Long id);
 
     boolean existsByEmail(String email);
 
