@@ -1,10 +1,10 @@
-package io.hlab.OpenConsole.infrastructure.security;
+package io.hlab.opencsp.infrastructure.security;
 
-import io.hlab.OpenConsole.application.user.UserService;
-import io.hlab.OpenConsole.domain.user.User;
-import io.hlab.OpenConsole.infrastructure.iam.IamClient;
-import io.hlab.OpenConsole.infrastructure.iam.IamException;
-import io.hlab.OpenConsole.infrastructure.iam.IamRole;
+import io.hlab.opencsp.application.user.UserService;
+import io.hlab.opencsp.domain.user.User;
+import io.hlab.opencsp.infrastructure.iam.IamClient;
+import io.hlab.opencsp.infrastructure.iam.IamException;
+import io.hlab.opencsp.infrastructure.iam.IamRole;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -68,8 +68,7 @@ public class JITUserProvisioningHandler extends SavedRequestAwareAuthenticationS
                 }
                 
                 // DB에 사용자 생성
-                User newUser = User.create(userEmail, userName);
-                User savedUser = userService.createUser(newUser);
+                User savedUser = userService.createUser(userEmail, userName);
                 log.info("New user created: id={}, email={}, subject={}", savedUser.getId(), userEmail, subject);
                 
                 // 4. 첫 로그인 시 IAM에 기본 role 부여

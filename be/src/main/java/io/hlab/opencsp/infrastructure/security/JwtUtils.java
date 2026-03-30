@@ -1,8 +1,8 @@
-package io.hlab.OpenConsole.infrastructure.security;
+package io.hlab.opencsp.infrastructure.security;
 
-import io.hlab.OpenConsole.infrastructure.iam.IamRole;
-import io.hlab.OpenConsole.infrastructure.iam.IamTokenDecoder;
-import io.hlab.OpenConsole.infrastructure.iam.IamUserInfo;
+import io.hlab.opencsp.infrastructure.iam.IamRole;
+import io.hlab.opencsp.infrastructure.iam.IamTokenDecoder;
+import io.hlab.opencsp.infrastructure.iam.IamUserInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
@@ -171,7 +171,7 @@ public class JwtUtils {
         log.debug("Checking all claims for role-related keys...");
         claims.forEach((key, value) -> {
             if (key.contains("roles") && !key.equals("roles")) {
-                log.info("Found role claim with key '{}': {}", key, value);
+                log.debug("Found role claim with key '{}': {}", key, value);
                 
                 // 배열 형태 처리
                 if (value instanceof List) {
@@ -206,7 +206,7 @@ public class JwtUtils {
             }
         });
 
-        log.info("Extracted roles from JWT: {}", roles);
+        log.debug("Extracted roles from JWT: {}", roles);
         return roles;
     }
 
