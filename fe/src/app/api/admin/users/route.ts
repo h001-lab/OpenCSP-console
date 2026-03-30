@@ -1,55 +1,28 @@
 import { auth } from "@/lib/auth";
-import { zitadelClient } from "@/lib/zitadel-client";
-import { NextResponse } from "next/server";
+import { callBackend } from "@/lib/backend-client";
+import { NextRequest, NextResponse } from "next/server";
+import { SessionUser } from "@/types/auth";
 
-interface SessionUser {
-  roles?: string[];
-  [key: string]: unknown;
+async function guardAdmin() {
+  const session = await auth();
+  if (!session?.user) return { error: "Unauthorized", status: 401 };
+  const user = session.user as SessionUser;
+  if (!user.roles?.includes("admin")) return { error: "Forbidden", status: 403 };
+  return { error: null, status: 200 };
 }
 
-export async function GET() {
-  try {
-    // 세션 확인
-    const session = await auth();
-    
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+export async function GET(req: NextRequest) {
+  const { error, status } = await guardAdmin();
+  if (error) return NextResponse.json({ error }, { status });
 
-    // Admin 권한 확인
-    const roles = (session.user as SessionUser)?.roles || [];
-    if (!roles.includes('admin')) {
-      return NextResponse.json(
-        { error: 'Forbidden: Admin role required' },
-        { status: 403 }
-      );
-    }
+  const res = await callBackend("/api/admin/users", undefined, req);
+  return NextResponse.json(await res.json(), { status: res.status });
+}
 
-    // Access Token 획득 (session.user에서 가져오기)
-    const user = session.user as SessionUser & { accessToken?: string; idToken?: string };
-    const userToken = user.accessToken;
-    
-    if (!userToken) {
-      return NextResponse.json(
-        { error: 'No access token available' },
-        { status: 401 }
-      );
-    }
+export async function POST(req: NextRequest) {
+  const { error, status } = await guardAdmin();
+  if (error) return NextResponse.json({ error }, { status });
 
-    const accessToken = await zitadelClient.getAccessToken(userToken);
-
-    // 사용자 목록 조회
-    const data = await zitadelClient.listUsers(accessToken);
-
-    return NextResponse.json(data);
-  } catch (error) {
-    console.error('Error fetching users:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch users', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
-  }
+  const res = await callBackend("/api/admin/users/sync", { method: "POST" }, req);
+  return NextResponse.json(await res.json(), { status: res.status });
 }

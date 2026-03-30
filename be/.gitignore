@@ -8,6 +8,9 @@ build/
 # Credential
 .env
 
+# H2 file-based DB
+data/
+
 ### STS ###
 .apt_generated
 .classpath

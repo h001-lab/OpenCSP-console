@@ -1,12 +1,4 @@
 
-export interface AnnouncementAdmin {
-	num: number;
-	name: React.ReactNode;
-	author: React.ReactNode;
-	created: React.ReactNode;
-	banner: React.ReactNode;
-}
-
 // info page
 export interface InfoPageMessage {
 	title: string;

@@ -1,85 +1,420 @@
 {
-    "Components":{
-        "Banner":{
-            "linkLabel":"Go to Announcements",
-            "storageKey":"banner"
-        }
-    },
-    "Nav": {
-        "title": "Open Console",
-        "home": "Home",
-        "dashboard": "Dashboard",
-        "announcements": "Announcements",
-        "admin": "Admin"
-    },
-    "Home": {
-        "title": "Welcome!",
-        "description": "This is the English page",
-        "sidebar": [
-            { "label": "Home", "path": "/" },
-            { "label": "Instances", "path": "/instances" }
-        ]
-    },
-    "Admin": {
-        "title": "Admin",
-        "sidebar": [
-            { "label": "Admin Page", "path": "/admin" },
-            { "label": "User Management", "path": "/admin/users" },
-            { "label": "Node Management", "path": "/admin/nodes" },
-            { "label": "System Settings", "path": "/admin/settings" },
-            { "label": "Monitoring", "path": "/admin/monitoring" }
-        ],
-        "info": [
-            {
-                "label": "User Management",
-                "description": "Manage users, permissions, and roles."
-            },
-            {
-                "label": "System Settings",
-                "description": "Manage overall system configurations."
-            },
-            {
-                "label": "Monitoring",
-                "description": "Monitor system status and performance."
-            }
-        ],
-        "monitoring":{
-            "title":"Monitoring",
-            "sub_title_1":"Logs & Reports"
-        },
-        "nodes":{
-            "title":"Node Management"
-        },
-        "settings":{
-            "title":"System Settings",
-            "sub_title_1":"Announcements & Banner Settings",
-            "tabs":{
-                "tab_1":{
-                    "title":"Announcements Tab"
-                },
-                "tab_2":{
-                    "title":"Banner Tab"
-                }
-            }
-        },
-        "users":{
-            "title":"User Management"
-        }
-        
-    },
-    "Announcements": {
-        "title": "Announcements",
-        "sidebar": [{ "label": "Home", "path": "/announcements" }]
-    },
-    "Dashboard": {
-        "title": "Dashboard",
-        "sidebar": [{ "label": "Dashboard Home", "path": "/dashboard" }]
-    },
-    "Instances": {
-        "title": "Instances",
-        "sidebar": [
-            { "label": "Instances", "path": "/instances#instances" },
-            { "label": "Instance Types", "path": "/instances#settings" }
-        ]
+  "Components": {
+    "Banner": {
+      "linkLabel": "Go to Announcements",
+      "storageKey": "banner"
     }
+  },
+  "Nav": {
+    "title": "OpenCSP Console"
+  },
+  "Home": {
+    "sidebar": [{ "label": "Home", "path": "/" }],
+    "hero": {
+      "title": "Welcome to OpenCSP Console",
+      "description": "Your open-source cloud platform powered by Proxmox and cloud-native tools. Build and manage your own CSP infrastructure from one place."
+    },
+    "news": {
+      "title": "Latest News",
+      "viewAll": "View all →",
+      "empty": "No news available."
+    },
+    "quickAccess": { "title": "Quick Access" },
+    "quickLinks": [
+      {
+        "label": "Instances",
+        "description": "Launch and manage virtual machine instances",
+        "href": "/instances"
+      }
+    ],
+    "gettingStarted": {
+      "title": "Getting Started",
+      "steps": [
+        "Connect your Proxmox node in Admin → Nodes",
+        "Configure IAM provider in Admin → Integrations",
+        "Launch your first instance via Compute → Instances"
+      ]
+    }
+  },
+  "News": {
+    "sidebar": [{ "label": "News", "path": "/news" }],
+    "title": "News",
+    "loading": "Loading…",
+    "empty": "No news found.",
+    "backToList": "← Back to list",
+    "notFound": "News not found."
+  },
+  "Admin": {
+    "title": "Admin",
+    "sidebar": [
+      { "label": "Admin Page", "path": "/admin" },
+      { "label": "User Management", "path": "/admin/users" },
+      { "label": "Node Management", "path": "/admin/nodes" },
+      { "label": "Integrations", "path": "/admin/integrations" },
+      { "label": "Infrastructure", "path": "/admin/infrastructure" },
+      { "label": "System Settings", "path": "/admin/settings" },
+      { "label": "Monitoring", "path": "/admin/monitoring" }
+    ],
+    "info": [
+      { "label": "User Management", "description": "Manage users, permissions, and roles." },
+      { "label": "Integrations", "description": "Configure IAM, Kubernetes, AI, and other integrations." },
+      { "label": "Infrastructure", "description": "View and manage provisioned Terraform resources." },
+      { "label": "System Settings", "description": "Manage overall system configurations." },
+      { "label": "Monitoring", "description": "Monitor system status and performance." }
+    ],
+    "monitoring": {
+      "title": "Monitoring",
+      "sub_title_1": "Logs & Reports"
+    },
+    "users": {
+      "title": "User Management",
+      "loading": "Loading users...",
+      "listTitle": "Users",
+      "totalTitle": "Total users ({count})",
+      "syncBtn": "IAM Sync",
+      "syncing": "Syncing...",
+      "refresh": "Refresh",
+      "syncComplete": "Sync complete — Total {total} ({created} created, {updated} updated)",
+      "syncFailed": "Sync failed",
+      "serverError": "Server error ({code})",
+      "unknownError": "Unknown error",
+      "errorHint": "If schema is not applied, restart the app or try Sync.",
+      "empty": {
+        "title": "No users",
+        "description": "Use the 'IAM Sync' button to import users."
+      },
+      "columns": {
+        "name": "Username",
+        "email": "Email",
+        "iamSubject": "IAM Client ID",
+        "roles": "Roles",
+        "status": "Status",
+        "syncedAt": "Synced At"
+      }
+    },
+    "nodes": {
+      "title": "Node Management",
+      "description": "Register and manage Proxmox hypervisor nodes.",
+      "refresh": "Refresh",
+      "addNode": "+ Add Node",
+      "loading": "Loading...",
+      "empty": "No nodes registered.",
+      "addFirst": "Add your first node",
+      "delete": "Delete",
+      "statusChangeFailed": "Failed to change status",
+      "columns": {
+        "hostname": "Hostname",
+        "ip": "IP",
+        "type": "Type",
+        "status": "Status",
+        "description": "Description",
+        "createdAt": "Created"
+      },
+      "form": {
+        "title": "Add Node",
+        "submitting": "Saving...",
+        "submit": "Save",
+        "hostname": { "label": "Hostname", "placeholder": "e.g. pve-01" },
+        "ip": { "label": "IP Address", "placeholder": "e.g. 192.168.1.10" },
+        "type": "Node Type",
+        "description": { "label": "Description", "placeholder": "Node description (optional)" },
+        "registerFailed": "Node registration failed"
+      },
+      "confirm": {
+        "statusChange": {
+          "title": "Change Node Status",
+          "message": "Change \"{hostname}\" node to {status} status?",
+          "confirm": "Change",
+          "cancel": "Cancel"
+        },
+        "delete": {
+          "title": "Delete Node",
+          "message": "Delete \"{hostname}\" node?",
+          "deleting": "Deleting...",
+          "confirm": "Delete",
+          "cancel": "Cancel"
+        }
+      }
+    },
+    "integrations": {
+      "title": "Integration Settings",
+      "description": "DB values take priority over env vars. Some changes require app restart.",
+      "loading": "Loading settings...",
+      "saveFailed": "Save failed",
+      "columns": { "key": "Key", "value": "Value", "source": "Source" },
+      "actions": {
+        "edit": "Edit",
+        "save": "Save",
+        "saving": "Saving...",
+        "cancel": "Cancel",
+        "delete": "Delete"
+      },
+      "sensitivePlaceholder": "Enter new value (leave empty to skip)",
+      "deleteConfirm": "Deleting \"{key}\" will revert to env var default. Continue?",
+      "descriptions": {
+        "IAM": "Authentication/Authorization provider (Zitadel, etc.)",
+        "K8S": "k3s/k8s cluster, FluxCD + tofu-controller settings",
+        "AI": "OpenAI-compatible models (incl. Gemini), Vertex AI settings",
+        "SEMAPHORE": "Ansible Semaphore post-provisioning automation",
+        "PROVISION": "Provisioning behavior settings (history retention, etc.)",
+        "GENERAL": "General app settings"
+      },
+      "iam": {
+        "providerLabel": "IAM Provider",
+        "unsaved": "Unsaved",
+        "testBtn": "Test Connection",
+        "testing": "Testing...",
+        "testPassed": "Test passed",
+        "testFailed": "Test failed",
+        "saveBtn": "Save",
+        "saving": "Saving...",
+        "savedOk": "Saved successfully",
+        "unchangedHint": "Unchanged (leave blank to keep current value)",
+        "loginRequired": "Provider saved. Please log in to continue."
+      }
+    },
+    "infrastructure": {
+      "title": "Infrastructure Overview",
+      "description": "Terraform CRs provisioned via FluxCD + tofu-controller.",
+      "loading": "Loading resources...",
+      "syncBtn": "Sync Cluster",
+      "syncing": "Syncing...",
+      "refresh": "Refresh",
+      "empty": "No provisioned resources.",
+      "syncComplete": "Cluster sync complete — {total} k8s CRs (imported {created}, already existed {skipped})",
+      "resourceCount": "Provisioning Resources ({count})",
+      "delete": "Delete",
+      "deleteFailed": "Delete failed",
+      "syncFailed": "Sync failed",
+      "columns": {
+        "crName": "CR Name",
+        "module": "Module",
+        "user": "User",
+        "status": "Status",
+        "updated": "Updated"
+      },
+      "confirm": {
+        "sync": {
+          "title": "Sync Cluster CRs",
+          "message": "Reads Terraform CRs from k8s cluster and imports missing entries.\nUse this to recover lost DB data.",
+          "confirm": "Sync",
+          "cancel": "Cancel"
+        },
+        "delete": {
+          "title": "Delete Resource",
+          "message": "Delete \"{name}\" resource?\nTerraform destroy will run.",
+          "deleting": "Deleting...",
+          "confirm": "Delete",
+          "cancel": "Cancel"
+        }
+      }
+    },
+    "settings": {
+      "title": "System Settings",
+      "sub_title_1": "Announcements & Banner",
+      "tabs": {
+        "tab_1": { "title": "News Management" },
+        "tab_2": { "title": "Banner" }
+      },
+      "news": {
+        "add": "+ Add News",
+        "loading": "Loading…",
+        "empty": "No news registered.",
+        "backToList": "← Back to list",
+        "editTitle": "Edit News",
+        "createTitle": "Create News",
+        "fields": {
+          "title": "Title",
+          "category": "Category",
+          "published": "Show on home",
+          "content": "Content"
+        },
+        "save": "Save",
+        "saving": "Saving…",
+        "cancel": "Cancel",
+        "columns": {
+          "title": "Title",
+          "category": "Category",
+          "published": "Visible",
+          "createdAt": "Created"
+        },
+        "actions": { "edit": "Edit", "delete": "Delete" },
+        "status": { "visible": "Visible", "hidden": "Hidden" },
+        "deleteConfirm": {
+          "title": "Delete News",
+          "message": "Delete \"{title}\"?",
+          "confirm": "Delete",
+          "cancel": "Cancel"
+        },
+        "categories": ["공지", "업데이트", "점검", "보안"]
+      },
+      "banner": {
+        "preview": "Preview",
+        "previewEmpty": "Preview will appear when you enter a message.",
+        "settings": "Banner Settings",
+        "messageLabel": "Message",
+        "messagePlaceholder": "Message to display in banner",
+        "linkLabel": "Link URL (optional)",
+        "apply": "Apply Banner",
+        "applying": "Saving…",
+        "saved": "Saved. Will reflect within 1 minute."
+      }
+    }
+  },
+"Dashboard": {
+    "title": "Dashboard",
+    "sidebar": [{ "label": "Dashboard Home", "path": "/dashboard" }],
+    "placeholder": "Add dashboard content here."
+  },
+  "Billing": {
+    "title": "Billing",
+    "sidebar": [
+      { "label": "Billing", "path": "/billing" }
+    ],
+    "description": "View your resource usage and billing history.",
+    "summary": {
+      "title": "This Month's Usage",
+      "cpu": "CPU",
+      "storage": "Storage",
+      "network": "Network",
+      "unit": { "cpu": "core·h", "storage": "GB", "network": "GB" }
+    },
+    "history": {
+      "title": "Billing History",
+      "empty": "No billing records found.",
+      "columns": { "period": "Period", "amount": "Amount", "status": "Status", "issued": "Issued" }
+    },
+    "status": { "paid": "Paid", "pending": "Pending", "overdue": "Overdue" }
+  },
+  "UserSettings": {
+    "title": "Settings",
+    "sidebar": [
+      { "label": "Settings", "path": "/settings" }
+    ],
+    "description": "Manage your account preferences.",
+    "profile": {
+      "title": "Profile",
+      "name": "Display Name",
+      "email": "Email",
+      "roles": "Roles",
+      "notAvailable": "—"
+    },
+    "preferences": {
+      "title": "Preferences",
+      "language": "Language",
+      "languageOptions": [
+        { "value": "en", "label": "English" },
+        { "value": "ko", "label": "한국어" }
+      ]
+    }
+  },
+  "Instances": {
+    "title": "Instances",
+    "sidebar": [
+      { "label": "Instances", "path": "/instances" },
+      { "label": "Instance List", "path": "/instances?view=list" }
+    ],
+    "intro": {
+      "title": "Cloud Instances",
+      "description": "Create and manage Proxmox-based virtual machines.\nProvision infrastructure as code via FluxCD + OpenTofu,\nand monitor creation status in real time.",
+      "features": [
+        { "title": "Fast Deploy", "desc": "GitOps-based automated provisioning" },
+        { "title": "Safe Management", "desc": "Isolated instance environment per user" },
+        { "title": "Real-time Monitoring", "desc": "Track CR status in real time" }
+      ],
+      "viewList": "View Instance List",
+      "loginRequired": "Login required to create instances."
+    },
+    "create": {
+      "backToList": "← Back to list",
+      "title": "Add Instance",
+      "description": "Start Proxmox VM provisioning.",
+      "sections": {
+        "basic": "Basic Info",
+        "resources": "Resources",
+        "network": "Network"
+      },
+      "fields": {
+        "vmName": "VM Name",
+        "vmId": "VM ID",
+        "cpu": "CPU (Cores)",
+        "memory": "Memory (MB)",
+        "disk": "Disk (GB)",
+        "ipConfig": "IP Configuration",
+        "dhcp": "DHCP",
+        "staticIp": "Static IP",
+        "ipAddress": "IP Address",
+        "gateway": "Gateway"
+      },
+      "submit": "Start Provisioning",
+      "submitting": "Submitting…",
+      "cancel": "Cancel",
+      "errors": {
+        "vmName": "Please enter a VM name.",
+        "ipAddress": "Please enter an IP address. (e.g. 192.168.1.100/24)",
+        "gateway": "Please enter a gateway. (e.g. 192.168.1.1)"
+      },
+      "failed": "Provisioning request failed"
+    },
+    "list": {
+      "title": "Instance List",
+      "description": "List of provisioned instances.",
+      "refresh": "Refresh",
+      "add": "+ Add Instance",
+      "deleteSelected": "Delete Selected ({count})",
+      "tabs": {
+        "active": "Active Instances",
+        "history": "History"
+      },
+      "loading": "Loading...",
+      "search": "Search (CR name, user, node, status)…",
+      "perPage": "{count} per page",
+      "empty": {
+        "noData": "No data.",
+        "noResults": "No search results."
+      },
+      "columns": {
+        "vmId": "VM ID",
+        "user": "User",
+        "crName": "CR Name",
+        "node": "Node",
+        "created": "Created",
+        "updated": "Updated",
+        "status": "Status"
+      },
+      "deleteFailed": "Delete failed",
+      "pageInfo": "{from}–{to} of {total}"
+    },
+    "detail": {
+      "backToList": "← Back to list",
+      "fields": {
+        "vmId": "VM ID",
+        "crName": "CR Name",
+        "moduleType": "Instance Type",
+        "node": "Node",
+        "userId": "User ID",
+        "status": "Status",
+        "createdAt": "Created",
+        "updatedAt": "Updated"
+      },
+      "actions": {
+        "console": "Console",
+        "edit": "Edit",
+        "stop": "Stop",
+        "delete": "Delete"
+      },
+      "notReady": "This feature is not ready yet.",
+      "deleteFailed": "Delete failed",
+      "terraformError": "A Terraform error occurred",
+      "terraformHint": "Delete the CR and reprovision.",
+      "deleteConfirm": {
+        "title": "Delete Instance",
+        "messageSingle": "Delete \"{name}\" instance?\nTerraform destroy will run.",
+        "messageMulti": "Delete {count} selected instances?\nTerraform destroy will run.",
+        "deleting": "Deleting…",
+        "confirm": "Delete",
+        "cancel": "Cancel"
+      }
+    }
+  }
 }

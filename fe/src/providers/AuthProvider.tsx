@@ -3,16 +3,7 @@
 import { useEffect } from "react";
 import { SessionProvider, signOut, useSession } from "next-auth/react";
 import { useAuthStore } from "@/stores/authStore";
-
-interface SessionUser {
-    name?: string | null;
-    email?: string | null;
-    image?: string | null;
-    roles?: string[];
-    accessToken?: string;
-    idToken?: string;
-    [key: string]: unknown;
-}
+import { SessionUser } from "@/types/auth";
 
 /**
  * AuthSync 컴포넌트
@@ -33,7 +24,7 @@ function AuthSync() {
 
             setAuth(
                 {
-                    id: user.email || "",
+                    id: user.id || user.email || "",
                     name: user.name || undefined,
                     email: user.email || undefined,
                     image: user.image || undefined,
@@ -45,7 +36,7 @@ function AuthSync() {
         }
 
         if (session?.error === "RefreshTokenError") {
-            signOut({ callbackUrl: "/auth/signin" }); // 리프레시 토큰까지 만료된 경우 강제 로그아웃
+            signOut({ callbackUrl: "/" }); // 리프레시 토큰까지 만료된 경우 강제 로그아웃
             return;
         }
     }, [session, status, setAuth, clearAuth, setLoading]);

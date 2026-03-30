@@ -1,5 +1,4 @@
 import NextAuth, { type DefaultSession } from "next-auth";
-import { JWT } from "next-auth/jwt";
 import Zitadel from "next-auth/providers/zitadel";
 
 // NextAuth 타입 확장
@@ -34,23 +33,16 @@ interface ZitadelProfile {
   [key: string]: unknown;
 }
 
-interface ExtendedToken {
-  accessToken: string;
-  idToken?: string;
-  refreshToken?: string;
-  expiresAt: number;
-  roles: string[];
-  error?: "RefreshTokenError";
-}
-
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Zitadel({
       issuer: process.env.ZITADEL_ISSUER,
       clientId: process.env.ZITADEL_CLIENT_ID,
+      clientSecret: process.env.ZITADEL_CLIENT_SECRET,
+      checks: ["pkce"],
       authorization: {
         params: {
-          scope: "openid email profile offline_access urn:zitadel:iam:org:project:id:zitadel:aud",
+          scope: `openid email profile offline_access urn:zitadel:iam:org:project:id:zitadel:aud urn:zitadel:iam:org:project:id:${process.env.ZITADEL_PROJECT_ID}:aud`,
         },
       },
     }),
@@ -105,13 +97,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
     async session({ session, token }) {
       if (session.user) {
+        // token.sub = Zitadel userId (OIDC subject), id로 노출
+        if (token.sub) session.user.id = token.sub;
         // token.roles가 혹시라도 객체로 들어올 경우를 대비한 최종 안전장치
         const rawRoles = token.roles || [];
-        session.user.roles = Array.isArray(rawRoles) 
-          ? rawRoles 
-          : Object.keys(rawRoles); 
+        session.user.roles = Array.isArray(rawRoles)
+          ? rawRoles
+          : Object.keys(rawRoles);
         session.user.idToken = token.idToken;
-        session.user.accessToken = token.accessToken;
         session.error = token.error;
       }
       return session;
