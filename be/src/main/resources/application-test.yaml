@@ -1,9 +1,9 @@
 spring:
   datasource:
-    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=MySQL
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=MySQL;NON_KEYWORDS=VALUE
     driver-class-name: org.h2.Driver
     username: sa
-    password: 
+    password:
 
   jpa:
     hibernate:
@@ -13,29 +13,29 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
 
-  # 테스트 환경에서는 OAuth2 Client 자동 설정을 완전히 비활성화
+  # 테스트 환경에서는 Spring AI 자동 설정 비활성화
   autoconfigure:
     exclude:
-      - org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientAutoConfiguration
-  
-  # 테스트 환경에서는 OAuth2 Resource Server 설정
-  security:
-    oauth2:
-      # OAuth2 Resource Server: 테스트용 가짜 issuer-uri (실제로는 모킹됨)
-      resourceserver:
-        jwt:
-          issuer-uri: http://localhost:8080/.well-known/jwks.json
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiChatAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiEmbeddingAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiImageAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioSpeechAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioTranscriptionAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiModerationAutoConfiguration
 
-  ai:
-    openai:
-      api-key: ${SPRING_AI_OPENAI_API_KEY:}
-      # Gemini API를 사용하므로 base-url도 필요
-      chat:
-        base-url: ${SPRING_AI_OPENAI_CHAT_BASE_URL:https://generativelanguage.googleapis.com/v1beta/openai/}
-        completions-path: ${SPRING_AI_OPENAI_CHAT_COMPLETIONS_PATH:/chat/completions}
+app:
+  # 테스트에서는 Zitadel provider를 활성화하여 JWT 기반 보안 테스트 가능
+  # ZitadelIamConfig가 JwtDecoder/ClientRegistrationRepository를 정적으로 등록 (네트워크 호출 없음)
+  iam:
+    provider: zitadel
 
 # 테스트용 Zitadel 설정 (실제 서버 없이 테스트)
+# ZitadelIamConfig는 NimbusJwtDecoder.withJwkSetUri()를 사용하므로 시작 시 연결하지 않음
 zitadel:
+  issuer-uri: http://localhost:9999
+  client-id: ""
+  client-secret: ""
   domain: http://localhost:9999
   org-id: test-org-id
   project-id: test-project-id
@@ -43,6 +43,6 @@ zitadel:
 
 logging:
   level:
-    io.hlab.OpenConsole: DEBUG
+    io.hlab.opencsp: DEBUG
     org.springframework.web: DEBUG
     org.springframework.security: DEBUG

@@ -4,10 +4,22 @@ spring:
     import: optional:file:.env[.properties],optional:file:be/.env[.properties]
 
   application:
-    name: OpenConsole
+    name: OpenCSP
+
+  # Spring AI 자동 구성 비활성화 — AiConfig 에서 조건부로 직접 등록
+  # Spring AI 1.1.x 기준 패키지: org.springframework.ai.model.openai.autoconfigure.*
+  autoconfigure:
+    exclude:
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiChatAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiEmbeddingAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiImageAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioSpeechAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioTranscriptionAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiModerationAutoConfiguration
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:defaultdb}
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:file:./data/opencsp;AUTO_SERVER=TRUE;DB_CLOSE_ON_EXIT=FALSE}
     username: ${SPRING_DATASOURCE_USERNAME:sa}
     password: ${SPRING_DATASOURCE_PASSWORD:}
     driver-class-name: ${SPRING_DATASOURCE_DRIVER:org.h2.Driver}
@@ -31,44 +43,9 @@ spring:
     ansi:
       enabled: ALWAYS
 
-
-  # security
-  security:
-    oauth2:
-      # OAuth2 Client: 로그인 플로우 (FE에서 리다이렉트)
-      client:
-        registration:
-          zitadel: # registrationId
-            client-id: ${ZITADEL_CLIENT_ID:}
-            client-secret: ${ZITADEL_CLIENT_SECRET:}
-            scope:
-              - openid
-              - profile
-              - email
-              # Zitadel Project role을 scope로 요청
-              # 형식: urn:zitadel:iam:org:project:role:{roleName}
-              # 또는 Project ID를 사용한 형식 (실제 Zitadel 설정에 맞게 조정 필요)
-              - urn:zitadel:iam:org:project:role:admin
-              - urn:zitadel:iam:org:project:role:userA
-              - urn:zitadel:iam:org:project:role:userB
-              - urn:zitadel:iam:org:project:role:userC
-            authorization-grant-type: authorization_code
-            redirect-uri: "{baseUrl}/login/oauth2/code/zitadel"
-            client-name: ZITADEL
-        provider:
-          zitadel:
-            issuer-uri: ${ZITADEL_ISSUER_URI:}
-            user-name-attribute: sub # ID값으로 'sub'를 사용하겠다는 명시
-      # OAuth2 Resource Server: JWT 토큰 검증 (API 요청 시)
-      resourceserver:
-        jwt:
-          issuer-uri: ${ZITADEL_ISSUER_URI:} # JWKS 엔드포인트 자동 감지
-          # JWT에서 role을 추출하기 위한 클레임 경로 설정
-          # Zitadel의 경우 role은 보통 "urn:zitadel:iam:org:project:roles" 또는 "roles" 클레임에 있음
-
   # Spring AI: Vertex AI / OpenAI(호환) 설정
+  # app.ai.enabled=true 일 때만 AiConfig 가 빈을 등록함 (기본값: false)
   ai:
-    # Vertex AI Gemini 설정 (gcloud 인증 필요)
     vertex:
       ai:
         gemini:
@@ -79,7 +56,6 @@ spring:
               model: ${SPRING_AI_VERTEX_CHAT_OPTIONS_MODEL:gemini-2.0-flash}
               temperature: ${SPRING_AI_VERTEX_CHAT_OPTIONS_TEMPERATURE:0.5}
 
-    # OpenAI
     openai:
       api-key: ${SPRING_AI_OPENAI_API_KEY:}
       chat:
@@ -96,11 +72,10 @@ logging:
   level:
     io:
       hlab:
-        OpenConsole:
+        opencsp:
           infrastructure:
-            security: DEBUG  # JWT role 추출 디버깅용
-            iam:
-              zitadel: DEBUG  # Zitadel API 호출 디버깅용
+            security: DEBUG
+            iam: DEBUG
     org:
       springframework:
         ai:
@@ -108,9 +83,53 @@ logging:
             client:
               advisor: DEBUG
 
+app:
+  # IAM 공급자 선택
+  # none    — 인증 없음 (기본값, 개발/데모용)
+  # zitadel — Zitadel 기반 JWT 인증 (프로덕션)
+  # APP_IAM_PROVIDER 환경변수로 오버라이드 가능
+  iam:
+    provider: ${APP_IAM_PROVIDER:none}
+
+  ai:
+    # true 로 설정하면 AiConfig 가 활성화되어 Spring AI 빈이 등록됨
+    # APP_AI_ENABLED=true 환경변수로 오버라이드 가능
+    enabled: ${APP_AI_ENABLED:false}
+
+  config:
+    # DB 설정 저장 시 민감값(sensitive=true) 암호화 키 (16자 이상 권장)
+    # 프로덕션에서는 반드시 APP_CONFIG_ENCRYPTION_KEY 환경변수로 오버라이드할 것
+    encryption-key: ${APP_CONFIG_ENCRYPTION_KEY:opencsp-dev-key!}
+
+  k8s:
+    # true → KubernetesClient + TofuControllerProvisioningClient 활성화
+    # false (기본값) → NoOpProvisioningClient (경고 로그만 출력)
+    enabled: ${APP_K8S_ENABLED:false}
+    # 연결 방식 1: API server URL + Bearer token (설정 시 kubeconfig 무시)
+    api-server: ${APP_K8S_API_SERVER:}   # e.g. https://192.168.1.100:6443
+    token: ${APP_K8S_TOKEN:}             # k3s service account token
+    trust-certs: ${APP_K8S_TRUST_CERTS:true}   # self-signed cert 허용
+    # 연결 방식 2: kubeconfig 파일 경로 (api-server 미설정 시)
+    kubeconfig: ${APP_K8S_KUBECONFIG:}
+    # 연결 방식 3: in-cluster (위 둘 다 미설정 시 자동)
+    flux:
+      namespace: ${APP_K8S_FLUX_NAMESPACE:flux-system}
+      git-repository-namespace: ${APP_K8S_FLUX_GIT_REPO_NAMESPACE:flux-system}
+      interval: ${APP_K8S_FLUX_INTERVAL:10m}
+      # Terraform runner Pod에 마운트할 SSH 키 Secret
+      runner-ssh-secret: ${APP_K8S_FLUX_RUNNER_SSH_SECRET:pve-ssh-key}
+      # varsFrom에 포함할 공통 Terraform Secret
+      vars-from-secret: ${APP_K8S_FLUX_VARS_FROM_SECRET:terraform-secrets}
+      # 모듈 타입 → GitRepository 내 경로 매핑 (미설정 시 코드 기본값 사용)
+      # module-paths:
+      #   proxmox-vm: ./bootstrap/terraform/provisions/proxmox-vm
+
+# Zitadel IAM 설정 (app.iam.provider=zitadel 일 때 사용)
 zitadel:
+  issuer-uri: ${ZITADEL_ISSUER_URI:}
+  client-id: ${ZITADEL_CLIENT_ID:}
+  client-secret: ${ZITADEL_CLIENT_SECRET:}
   # domain은 프로토콜 포함 가능 (http:// 또는 https://) 또는 프로토콜 없이 도메인만
-  # 프로토콜이 없으면 자동으로 https://가 추가됨
   domain: ${ZITADEL_DOMAIN:}
   org-id: ${ZITADEL_ORG_ID:}
   project-id: ${ZITADEL_PROJECT_ID:}

@@ -1,4 +1,4 @@
-package io.hlab.OpenConsole.infrastructure.config;
+package io.hlab.opencsp.infrastructure.config;
 
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
@@ -23,24 +23,10 @@ public class OpenApiConfig {
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("OpenConsole API")
+                        .title("OpenCSP-Console API")
                         .version("1.0.0")
                         .description("""
-                                VPS 서비스 백엔드 API 문서
-                                
-                                ## 인증 방법
-                                1. Zitadel에서 로그인하여 JWT 토큰을 발급받으세요.
-                                   - 프론트엔드에서 로그인하거나
-                                   - 브라우저에서 직접 로그인
-                                2. Swagger UI 우측 상단의 "Authorize" 버튼을 클릭하세요.
-                                3. "bearer-jwt" 섹션에 JWT 토큰을 입력하세요.
-                                   (예: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...)
-                                4. "Authorize" 버튼을 클릭하여 저장하세요.
-                                
-                                ## JWT 토큰 발급 방법
-                                - 브라우저 개발자 도구 → Application/Storage 탭에서 확인
-                                - 또는 Network 탭에서 API 요청의 Authorization 헤더 확인
-                                - 자세한 내용은 docs/ZITADEL_JWT_TOKEN_GUIDE.md 참고
+                                OpenCSP Console API Documentation
                                 """))
                 .components(new Components()
                         .addSecuritySchemes("bearer-jwt", new SecurityScheme()
