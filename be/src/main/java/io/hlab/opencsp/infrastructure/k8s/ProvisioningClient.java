@@ -75,6 +75,12 @@ public interface ProvisioningClient {
      */
     List<CrMeta> listAllCrMeta(String namespace);
 
+    /**
+     * tofu-controller가 생성한 tfstate Secret을 삭제한다.
+     * 이름 형식: {@code tfstate-default-{crName}}
+     */
+    void deleteTfStateSecret(String crName);
+
     /** Terraform output 항목 */
     record OutputEntry(String value, String type, boolean sensitive) {}
 

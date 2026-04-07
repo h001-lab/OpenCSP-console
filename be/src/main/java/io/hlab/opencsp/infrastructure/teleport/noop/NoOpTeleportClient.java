@@ -23,12 +23,15 @@ public class NoOpTeleportClient implements TeleportClient {
     public String getOrRefreshToken() { throw notConfigured(); }
 
     @Override
+    public String getSessionCookie() { return ""; }
+
+    @Override
     public String getClusterName() { throw notConfigured(); }
 
     @Override
     public Optional<TeleportNodeInfo> findNodeByHostname(String hostname) { return Optional.empty(); }
 
-    @Override
+@Override
     public URI buildSshWsUri(String nodeId, String login, int cols, int rows, String teleportSessionId) {
         throw notConfigured();
     }

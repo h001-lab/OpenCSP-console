@@ -72,6 +72,9 @@ dependencies {
     testImplementation("org.springframework.security:spring-security-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
+    // JSch: SSH 클라이언트 (Teleport tsh 임시 연동용 — Go Adapter 전환 시 제거)
+    implementation("com.github.mwiede:jsch:0.2.20")
+
     // SpringDoc이 HATEOAS를 공식적으로 연동하도록 돕는 모듈
     // implementation("org.springdoc:springdoc-openapi-starter-hateoas")
 	// Swagger-UI

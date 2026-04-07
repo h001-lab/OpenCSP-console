@@ -57,4 +57,9 @@ public class NoOpProvisioningClient implements ProvisioningClient {
     public java.util.List<ProvisioningClient.CrMeta> listAllCrMeta(String namespace) {
         return java.util.List.of();
     }
+
+    @Override
+    public void deleteTfStateSecret(String crName) {
+        log.warn("*** K8s not configured. Skipping tfstate secret deletion for CR='{}'. ***", crName);
+    }
 }

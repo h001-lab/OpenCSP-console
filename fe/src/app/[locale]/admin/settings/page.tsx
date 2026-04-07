@@ -60,8 +60,7 @@ interface ComponentsMessages {
   Banner: { linkLabel: string };
 }
 
-// ─── News 탭 ──────────────────────────────────────────────────────────────────
-
+// news
 function NewsTab() {
   const adminMsg = useMsg("Admin") as unknown as { settings: SettingsMessages } | undefined;
   const [items, setItems]         = useState<NewsItem[]>([]);
@@ -140,17 +139,19 @@ function NewsTab() {
                 <input type="text" className={inputCls} value={form.title}
                   onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
               </div>
-              <div>
-                <label className={labelCls}>{t.fields.category}</label>
-                <select className={inputCls} value={form.category}
-                  onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}>
-                  {t.categories.map((c) => <option key={c}>{c}</option>)}
-                </select>
-              </div>
-              <div className="flex items-center gap-2 pt-5">
-                <input type="checkbox" id="published" checked={form.published}
-                  onChange={(e) => setForm((f) => ({ ...f, published: e.target.checked }))} />
-                <label htmlFor="published" className="text-sm text-gray-700">{t.fields.published}</label>
+              <div className="col-span-2 flex items-end gap-4">
+                <div className="flex-1">
+                  <label className={labelCls}>{t.fields.category}</label>
+                  <select className={inputCls} value={form.category}
+                    onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}>
+                    {t.categories.map((c) => <option key={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div className="flex items-center gap-2 pb-2">
+                  <input type="checkbox" id="published" checked={form.published}
+                    onChange={(e) => setForm((f) => ({ ...f, published: e.target.checked }))} />
+                  <label htmlFor="published" className="text-sm text-gray-700">{t.fields.published}</label>
+                </div>
               </div>
               <div className="col-span-2">
                 <label className={labelCls}>{t.fields.content}</label>
@@ -185,7 +186,7 @@ function NewsTab() {
             <thead>
               <tr className="text-xs text-gray-500 border-b bg-gray-50">
                 <th className="text-left px-4 py-2 font-medium">{t.columns.title}</th>
-                <th className="text-left px-4 py-2 font-medium w-20">{t.columns.category}</th>
+                <th className="text-left px-4 py-2 font-medium w-32">{t.columns.category}</th>
                 <th className="text-left px-4 py-2 font-medium w-20">{t.columns.published}</th>
                 <th className="text-left px-4 py-2 font-medium w-32">{t.columns.createdAt}</th>
                 <th className="px-4 py-2 w-24" />
@@ -196,7 +197,7 @@ function NewsTab() {
                 <tr key={item.id} className="border-b last:border-b-0 hover:bg-gray-50/50">
                   <td className="px-4 py-2.5 text-gray-800">{item.title}</td>
                   <td className="px-4 py-2.5">
-                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{item.category}</span>
+                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded whitespace-nowrap">{item.category}</span>
                   </td>
                   <td className="px-4 py-2.5">
                     <span className={`text-xs font-medium ${item.published ? "text-green-600" : "text-gray-400"}`}>
@@ -232,8 +233,8 @@ function NewsTab() {
   );
 }
 
-// ─── Banner 탭 ────────────────────────────────────────────────────────────────
 
+// Baaner
 function BannerTab() {
   const adminMsg = useMsg("Admin") as unknown as { settings: SettingsMessages } | undefined;
   const compMsg  = useMsg("Components") as unknown as ComponentsMessages | undefined;
@@ -322,8 +323,8 @@ function BannerTab() {
   );
 }
 
-// ─── 메인 페이지 ──────────────────────────────────────────────────────────────
 
+// main
 export default function SettingsPage() {
   const isAdmin = useAdminProtection();
   const adminMsg = useMsg("Admin") as unknown as { settings: SettingsMessages } | undefined;

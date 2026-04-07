@@ -25,6 +25,10 @@ public class ProvisionHistory {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /** 전체 워크플로우 추적 ID — Provision.provisionTaskId 와 동일 */
+    @Column(name = "provision_task_id", length = 36)
+    private String provisionTaskId;
+
     /** Terraform CR 이름 — provisions 삭제 후에도 식별 가능하도록 단순 문자열로 보관 */
     @Column(name = "cr_name", nullable = false, length = 253)
     private String crName;
@@ -64,6 +68,7 @@ public class ProvisionHistory {
 
     public static ProvisionHistory created(Provision provision) {
         return ProvisionHistory.builder()
+                .provisionTaskId(provision.getProvisionTaskId())
                 .crName(provision.getCrName())
                 .userId(provision.getUserId())
                 .tenantId(provision.getTenantId())
@@ -75,6 +80,7 @@ public class ProvisionHistory {
 
     public static ProvisionHistory statusChanged(Provision provision, ProvisionStatus from, ProvisionStatus to) {
         return ProvisionHistory.builder()
+                .provisionTaskId(provision.getProvisionTaskId())
                 .crName(provision.getCrName())
                 .userId(provision.getUserId())
                 .tenantId(provision.getTenantId())
@@ -87,6 +93,7 @@ public class ProvisionHistory {
 
     public static ProvisionHistory statusChanged(Provision provision, ProvisionStatus from, ProvisionStatus to, String detail) {
         return ProvisionHistory.builder()
+                .provisionTaskId(provision.getProvisionTaskId())
                 .crName(provision.getCrName())
                 .userId(provision.getUserId())
                 .tenantId(provision.getTenantId())

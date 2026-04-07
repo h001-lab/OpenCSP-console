@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "provisions")
@@ -11,7 +12,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
-public class Provision {
+public class Provision extends SemaphoreTrackable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -20,6 +21,13 @@ public class Provision {
     /** 테넌트 ID. null = 단일 테넌트 모드 */
     @Column(name = "tenant_id", length = 255)
     private String tenantId;
+
+    /**
+     * 프로비저닝 전체 워크플로우(Terraform + Semaphore) 추적용 UUID.
+     * provision() 시 생성되며 로그 상관관계 식별에 사용된다.
+     */
+    @Column(name = "provision_task_id", nullable = false, unique = true, length = 36)
+    private String provisionTaskId;
 
     /** Terraform CR 이름 (k8s 기준 식별자) */
     @Column(name = "cr_name", nullable = false, unique = true, length = 253)
@@ -75,6 +83,7 @@ public class Provision {
                                    String gitRepositoryName, String userId, Long vmId,
                                    String proxmoxNode, String vmHostname) {
         return Provision.builder()
+                .provisionTaskId(UUID.randomUUID().toString())
                 .crName(crName)
                 .moduleType(moduleType)
                 .namespace(namespace)

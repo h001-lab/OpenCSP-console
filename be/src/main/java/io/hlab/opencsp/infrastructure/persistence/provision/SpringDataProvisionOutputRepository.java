@@ -12,7 +12,7 @@ public interface SpringDataProvisionOutputRepository extends JpaRepository<Provi
     List<ProvisionOutput> findByCrName(String crName);
     Optional<ProvisionOutput> findByCrNameAndOutputKey(String crName, String outputKey);
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("DELETE FROM ProvisionOutput p WHERE p.crName = :crName")
     void deleteByCrName(String crName);
 }

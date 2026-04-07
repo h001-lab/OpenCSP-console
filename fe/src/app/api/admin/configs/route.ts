@@ -20,8 +20,12 @@ export async function GET(req: NextRequest) {
   const { forbidden } = await getAdminGuard();
   if (forbidden) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const res = await callBackend("/api/admin/configs", undefined, req);
-  return NextResponse.json(await res.json(), { status: res.status });
+  try {
+    const res = await callBackend("/api/admin/configs", undefined, req);
+    return NextResponse.json(await res.json(), { status: res.status });
+  } catch {
+    return NextResponse.json({ error: "Backend unreachable", code: "BACKEND_UNREACHABLE" }, { status: 503 });
+  }
 }
 
 /** PUT /api/admin/configs — 설정 저장/수정 */

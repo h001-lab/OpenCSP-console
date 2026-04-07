@@ -16,11 +16,15 @@ public interface TeleportClient {
     /** Teleport 세션 Bearer 토큰 반환 (만료 시 자동 갱신) */
     String getOrRefreshToken();
 
+    /** Teleport 세션 쿠키 반환 (Authorization 헤더와 함께 사용) */
+    String getSessionCookie();
+
     /** 클러스터 이름 반환 */
     String getClusterName();
 
     /** hostname으로 Teleport 노드 조회 */
     Optional<TeleportNodeInfo> findNodeByHostname(String hostname);
+
 
     /**
      * Teleport SSH 터미널 WebSocket URI 생성.

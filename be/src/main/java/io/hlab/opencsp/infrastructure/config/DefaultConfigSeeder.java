@@ -33,11 +33,14 @@ public class DefaultConfigSeeder implements ApplicationRunner {
         Set<String> existingGeneralKeys    = toKeySet(configStore.getAll(ConfigCategory.GENERAL));
         Set<String> existingIamKeys        = toKeySet(configStore.getAll(ConfigCategory.IAM));
         Set<String> existingProvisionKeys  = toKeySet(configStore.getAll(ConfigCategory.PROVISION));
+        Set<String> existingSemaphoreKeys  = toKeySet(configStore.getAll(ConfigCategory.SEMAPHORE));
 
         // DB에 없는 키만 씨드하되, 기본값은 환경변수에서 읽어온다.
         // 이미 DB에 값이 있으면 스킵 → UI에서 수정한 값이 항상 우선된다.
         seedIfAbsent(existingGeneralKeys, ConfigCategory.GENERAL, "iam.provider", "none", false,
                 "IAM 공급자 (none | zitadel)");
+        seedIfAbsent(existingGeneralKeys, ConfigCategory.GENERAL, "pam.provider", "none", false,
+                "PAM 공급자 (none | teleport)");
 
         seedIfAbsent(existingIamKeys, ConfigCategory.IAM, "zitadel.issuer-uri", "", false,
                 "Zitadel 발급 URL (예: https://your-instance.zitadel.cloud)");
@@ -59,6 +62,21 @@ public class DefaultConfigSeeder implements ApplicationRunner {
 
         seedIfAbsent(existingProvisionKeys, ConfigCategory.PROVISION, "history-retention-days", "90", false,
                 "프로비저닝 이력 보관 일수 (0 = 자동 삭제 비활성화)");
+
+        seedIfAbsent(existingSemaphoreKeys, ConfigCategory.SEMAPHORE, "semaphore.url", "", false,
+                "Semaphore 서버 URL (예: https://semaphore.example.com)");
+        seedIfAbsent(existingSemaphoreKeys, ConfigCategory.SEMAPHORE, "semaphore.api.token", "", true,
+                "Semaphore API 토큰 (Semaphore UI: User Settings → API Tokens)");
+        seedIfAbsent(existingSemaphoreKeys, ConfigCategory.SEMAPHORE, "semaphore.project.id", "", false,
+                "Semaphore 프로젝트 ID (연결 테스트 후 자동 감지 가능)");
+        seedIfAbsent(existingSemaphoreKeys, ConfigCategory.SEMAPHORE, "semaphore.environment.id", "", false,
+                "Semaphore 공통 변수 그룹 ID (설정 시 매 프로비저닝마다 동적 생성하지 않고 해당 환경을 재사용)");
+        seedIfAbsent(existingSemaphoreKeys, ConfigCategory.SEMAPHORE, "semaphore.repository.id", "", false,
+                "Semaphore 프로젝트에 등록된 Git Repository ID");
+        seedIfAbsent(existingSemaphoreKeys, ConfigCategory.SEMAPHORE, "semaphore.playbook", "", false,
+                "실행할 playbook 경로 (예: site.yml)");
+        seedIfAbsent(existingSemaphoreKeys, ConfigCategory.SEMAPHORE, "semaphore.ssh.key.id", "", false,
+                "고정 SSH Key ID (미설정 시 Terraform output의 ssh_private_key로 동적 생성)");
 
         log.info("DefaultConfigSeeder: default config seeding complete.");
 

@@ -9,7 +9,12 @@
     "title": "OpenCSP 콘솔"
   },
   "Home": {
-    "sidebar": [{ "label": "홈", "path": "/" }],
+    "sidebar": [
+      {
+        "label": "홈",
+        "path": "/"
+      }
+    ],
     "hero": {
       "title": "OpenCSP 콘솔에 오신 것을 환영합니다",
       "description": "Proxmox와 클라우드 네이티브 도구로 구동되는 오픈소스 클라우드 플랫폼입니다. 나만의 CSP 인프라를 한 곳에서 구축하고 관리하세요."
@@ -19,7 +24,9 @@
       "viewAll": "전체 보기 →",
       "empty": "등록된 뉴스가 없습니다."
     },
-    "quickAccess": { "title": "빠른 접근" },
+    "quickAccess": {
+      "title": "빠른 접근"
+    },
     "quickLinks": [
       {
         "label": "인스턴스",
@@ -30,14 +37,19 @@
     "gettingStarted": {
       "title": "시작하기",
       "steps": [
-        "관리자 → 노드에서 Proxmox 노드를 연결하세요",
         "관리자 → 통합 설정에서 IAM 공급자를 설정하세요",
+        "관리자 → 통합 설정에서 노드를 연결하세요",
         "컴퓨트 → 인스턴스에서 첫 번째 인스턴스를 시작하세요"
       ]
     }
   },
   "News": {
-    "sidebar": [{ "label": "뉴스", "path": "/news" }],
+    "sidebar": [
+      {
+        "label": "뉴스",
+        "path": "/news"
+      }
+    ],
     "title": "뉴스",
     "loading": "로딩 중…",
     "empty": "등록된 뉴스가 없습니다.",
@@ -47,24 +59,75 @@
   "Admin": {
     "title": "관리자",
     "sidebar": [
-      { "label": "관리자 페이지", "path": "/admin" },
-      { "label": "유저 관리", "path": "/admin/users" },
-      { "label": "노드 관리", "path": "/admin/nodes" },
-      { "label": "통합 설정", "path": "/admin/integrations" },
-      { "label": "인프라 현황", "path": "/admin/infrastructure" },
-      { "label": "시스템 설정", "path": "/admin/settings" },
-      { "label": "모니터링", "path": "/admin/monitoring" }
+      {
+        "label": "관리자 페이지",
+        "path": "/admin"
+      },
+      {
+        "label": "유저 관리",
+        "path": "/admin/users"
+      },
+      {
+        "label": "통합 설정",
+        "path": "/admin/integrations"
+      },
+      {
+        "label": "인프라 현황",
+        "path": "/admin/infrastructure"
+      },
+      {
+        "label": "시스템 설정",
+        "path": "/admin/settings"
+      },
+      {
+        "label": "모니터링",
+        "path": "/admin/monitoring"
+      }
     ],
     "info": [
-      { "label": "유저 관리", "description": "사용자와 사용자의 권한, 역할을 관리합니다." },
-      { "label": "통합 설정", "description": "IAM, Kubernetes, AI 등 외부 연동 설정을 관리합니다." },
-      { "label": "인프라 현황", "description": "Terraform으로 프로비저닝된 리소스 현황을 관리합니다." },
-      { "label": "시스템 설정", "description": "시스템의 전반적인 설정을 관리합니다." },
-      { "label": "모니터링", "description": "시스템의 상태와 성능을 모니터링합니다." }
+      {
+        "label": "유저 관리",
+        "description": "사용자와 사용자의 권한, 역할을 관리합니다."
+      },
+      {
+        "label": "통합 설정",
+        "description": "IAM, Kubernetes, AI 등 외부 연동 설정을 관리합니다."
+      },
+      {
+        "label": "인프라 현황",
+        "description": "Terraform으로 프로비저닝된 리소스 현황을 관리합니다."
+      },
+      {
+        "label": "시스템 설정",
+        "description": "시스템의 전반적인 설정을 관리합니다."
+      },
+      {
+        "label": "모니터링",
+        "description": "시스템의 상태와 성능을 모니터링합니다."
+      }
     ],
     "monitoring": {
       "title": "모니터링",
-      "sub_title_1": "로그 및 보고서"
+      "sub_title_1": "로그 및 보고서",
+      "nodeMetrics": {
+        "title": "노드 메트릭",
+        "description": "Proxmox 노드 API를 통해 수집된 실시간 리소스 사용량입니다.",
+        "refresh": "새로고침",
+        "loading": "불러오는 중...",
+        "empty": "등록된 노드가 없습니다.",
+        "noMetrics": "메트릭 없음",
+        "noCredentials": "API 크레덴셜 미설정",
+        "lastUpdated": "갱신",
+        "cpu": "CPU",
+        "mem": "메모리",
+        "disk": "디스크",
+        "status": {
+          "ACTIVE": "활성",
+          "ISOLATED": "격리",
+          "MAINTENANCE": "점검",
+          "OFFLINE": "오프라인"
+        }
+      }
     },
     "users": {
       "title": "유저 관리",
@@ -92,56 +155,16 @@
         "syncedAt": "동기화 일시"
       }
     },
-    "nodes": {
-      "title": "노드 관리",
-      "description": "Proxmox 하이퍼바이저 노드를 등록하고 상태를 관리합니다.",
-      "refresh": "새로고침",
-      "addNode": "+ 노드 등록",
-      "loading": "불러오는 중...",
-      "empty": "등록된 노드가 없습니다.",
-      "addFirst": "첫 노드 등록하기",
-      "delete": "삭제",
-      "statusChangeFailed": "상태 변경 실패",
-      "columns": {
-        "hostname": "호스트명",
-        "ip": "IP",
-        "type": "타입",
-        "status": "상태",
-        "description": "설명",
-        "createdAt": "등록일"
-      },
-      "form": {
-        "title": "노드 등록",
-        "submitting": "등록 중…",
-        "submit": "등록",
-        "hostname": { "label": "호스트명", "placeholder": "예: pve-01" },
-        "ip": { "label": "IP 주소", "placeholder": "예: 192.168.1.10" },
-        "type": "노드 타입",
-        "description": { "label": "설명", "placeholder": "노드 설명 (선택)" },
-        "registerFailed": "노드 등록 실패"
-      },
-      "confirm": {
-        "statusChange": {
-          "title": "노드 상태 변경",
-          "message": "\"{hostname}\" 노드를 {status} 상태로 변경하시겠습니까?",
-          "confirm": "변경",
-          "cancel": "취소"
-        },
-        "delete": {
-          "title": "노드 삭제",
-          "message": "\"{hostname}\" 노드를 삭제하시겠습니까?",
-          "deleting": "삭제 중…",
-          "confirm": "삭제",
-          "cancel": "취소"
-        }
-      }
-    },
     "integrations": {
       "title": "통합 설정 관리",
       "description": "DB에 저장된 값이 환경변수보다 우선 적용됩니다. 일부 변경사항은 앱 재시작 후 적용됩니다.",
       "loading": "설정을 불러오는 중...",
       "saveFailed": "저장 실패",
-      "columns": { "key": "Key", "value": "Value", "source": "Source" },
+      "columns": {
+        "key": "Key",
+        "value": "Value",
+        "source": "Source"
+      },
       "actions": {
         "edit": "편집",
         "save": "저장",
@@ -151,9 +174,15 @@
       },
       "sensitivePlaceholder": "새 값 입력 (비우면 저장 안 됨)",
       "deleteConfirm": "\"{key}\" 설정을 삭제하면 환경변수 기본값으로 복귀합니다. 계속하시겠습니까?",
+      "tabs": {
+        "nodes": "노드",
+        "core": "코어",
+        "console": "콘솔"
+      },
       "descriptions": {
         "IAM": "인증/인가 공급자 (Zitadel 등)",
-        "K8S": "k3s/k8s 클러스터, FluxCD + tofu-controller 설정",
+        "PAM": "특권 접근 관리 (Teleport 등)",
+        "K8S": "Core(Kubernetes) 설정",
         "AI": "OpenAI 호환 모델 (Gemini 포함), Vertex AI 설정",
         "SEMAPHORE": "Ansible Semaphore post-provisioning 자동화",
         "PROVISION": "프로비저닝 동작 설정 (이력 보관 기간 등)",
@@ -171,11 +200,200 @@
         "savedOk": "저장되었습니다",
         "unchangedHint": "변경 없음 (비워두면 기존 값 유지)",
         "loginRequired": "설정이 저장되었습니다. 계속하려면 로그인하세요."
+      },
+      "pam": {
+        "providerLabel": "PAM 공급자",
+        "unsaved": "미저장",
+        "mfaLabel": "MFA 토큰 (선택)",
+        "mfaPlaceholder": "6자리 OTP",
+        "testBtn": "연결 테스트",
+        "testing": "테스트 중...",
+        "testPassed": "연결 성공",
+        "testFailed": "연결 실패",
+        "saveBtn": "저장",
+        "saving": "저장 중...",
+        "savedOk": "저장되었습니다",
+        "unchangedHint": "변경 없음 (비워두면 기존 값 유지)"
+      },
+      "k8s": {
+        "title": "Kubernetes / k3s",
+        "description": "클러스터 접근을 위한 API 서버 URL과 서비스 계정 토큰.",
+        "apiServerLabel": "API 서버 URL",
+        "apiServerPlaceholder": "https://192.168.1.10:6443",
+        "tokenLabel": "Bearer 토큰",
+        "tokenPlaceholder": "토큰 입력 (비워두면 기존 값 유지)",
+        "testBtn": "연결 테스트",
+        "testing": "테스트 중...",
+        "testPassed": "연결 성공",
+        "testFailed": "연결 실패",
+        "saveBtn": "저장",
+        "saving": "저장 중...",
+        "savedOk": "저장되었습니다",
+        "saveFailed": "저장 실패"
+      },
+      "backend": {
+        "title": "백엔드",
+        "description": "OpenCSP 백엔드 API 서버 URL.",
+        "urlLabel": "백엔드 URL",
+        "urlPlaceholder": "http://localhost:8080",
+        "envHint": "현재 BACKEND_URL 환경변수 값을 사용 중입니다.",
+        "testBtn": "연결 테스트",
+        "testing": "테스트 중...",
+        "testPassed": "연결 성공",
+        "testFailed": "연결 실패",
+        "saveBtn": "저장",
+        "saving": "저장 중...",
+        "savedOk": "저장되었습니다 — 즉시 반영됩니다",
+        "saveFailed": "저장 실패"
+      },
+      "semaphore": {
+        "unsaved": "미저장",
+        "testBtn": "연결 테스트",
+        "testing": "테스트 중...",
+        "testPassed": "테스트 통과",
+        "testFailed": "테스트 실패",
+        "saveBtn": "저장",
+        "saving": "저장 중...",
+        "savedOk": "저장되었습니다",
+        "unchangedHint": "변경 없음 (비워두면 기존 값 유지)",
+        "loadProjectsBtn": "프로젝트 불러오기",
+        "loadingProjects": "불러오는 중...",
+        "projectLabel": "프로젝트",
+        "projectPlaceholder": "프로젝트 선택",
+        "repoSection": "Git 저장소",
+        "repoName": "저장소 이름",
+        "repoUrl": "Git URL",
+        "repoBranch": "브랜치",
+        "repoToken": "액세스 토큰",
+        "repoTokenHint": "공개 저장소 또는 SSH 키 사용 시 비워두세요",
+        "playbookSection": "Playbook",
+        "playbookDesc": "프로비저닝 후 실행할 playbook 파일 경로",
+        "envSection": "Variable Group (Environment)",
+        "envPlaceholder": "Variable Group 선택",
+        "loadEnvsBtn": "Environment 불러오기",
+        "varGroupSection": "Variable Group",
+        "varGroupName": "그룹 이름",
+        "createBtn": "생성",
+        "creating": "생성 중...",
+        "createOk": "생성되었습니다",
+        "createFailed": "생성 실패",
+        "varKeys": [
+          {
+            "key": "TELEPORT_PROXY_ADDR",
+            "label": "Teleport Proxy 주소",
+            "placeholder": "예: teleport.example.com:443"
+          },
+          {
+            "key": "TELEPORT_JOIN_TOKEN",
+            "label": "Teleport Join 토큰",
+            "placeholder": "Join 토큰"
+          }
+        ]
+      },
+      "nodes": {
+        "sectionTitle": "노드",
+        "description": "Proxmox 노드를 등록하고 API 크레덴셜을 설정하면 메트릭을 자동으로 수집합니다.",
+        "refresh": "새로고침",
+        "addNode": "노드 등록",
+        "loading": "불러오는 중...",
+        "empty": "등록된 노드가 없습니다.",
+        "delete": "삭제",
+        "statusChangeFailed": "상태 변경 실패",
+        "credentialsTitle": "API 크레덴셜",
+        "credentialsSaved": "크레덴셜이 저장되었습니다",
+        "credentialsSaveFailed": "크레덴셜 저장 실패",
+        "testBtn": "테스트",
+        "testing": "테스트 중...",
+        "testPassed": "테스트 통과",
+        "testFailed": "테스트 실패",
+        "editCredentials": "설정",
+        "saveCredentials": "저장",
+        "savingCredentials": "저장 중...",
+        "cancelCredentials": "취소",
+        "derivedApiUrlLabel": "API URL",
+        "columns": {
+          "hostname": "호스트명",
+          "ip": "IP / URL",
+          "type": "타입",
+          "status": "상태",
+          "api": "API",
+          "metrics": "메트릭",
+          "actions": ""
+        },
+        "apiStatus": {
+          "connected": "연결됨",
+          "noCredentials": "미설정"
+        },
+        "form": {
+          "title": "노드 등록",
+          "submitting": "등록 중…",
+          "submit": "등록",
+          "hostname": {
+            "label": "호스트명",
+            "placeholder": "예: pve-01"
+          },
+          "ip": {
+            "label": "IP 주소 / URL",
+            "placeholder": "예: 192.168.1.10 또는 https://pve.example.com:8006"
+          },
+          "type": "노드 타입",
+          "description": {
+            "label": "설명",
+            "placeholder": "노드 설명 (선택)"
+          },
+          "registerFailed": "노드 등록 실패"
+        },
+        "credentials": {
+          "proxmoxNode": {
+            "label": "Proxmox 노드명",
+            "placeholder": "예: pve (기본: 호스트명)"
+          },
+          "apiToken": {
+            "label": "API 토큰",
+            "placeholder": "USER@realm!tokenid=secret"
+          }
+        },
+        "isolateBtn": "격리",
+        "restoreBtn": "복구",
+        "autoDetect": "자동 감지",
+        "detecting": "감지 중...",
+        "detected": {
+          "title": "클러스터에서 감지된 노드",
+          "noSeedNode": "API 크레덴셜이 설정된 노드가 없습니다. 먼저 노드에 크레덴셜을 등록하세요.",
+          "noNew": "클러스터의 모든 노드가 이미 등록되어 있습니다.",
+          "importBtn": "등록",
+          "importAll": "전체 등록",
+          "importing": "등록 중...",
+          "importFailed": "등록 실패"
+        },
+        "confirm": {
+          "delete": {
+            "title": "노드 삭제",
+            "message": "\"{hostname}\" 노드를 삭제하시겠습니까?",
+            "deleting": "삭제 중…",
+            "confirm": "삭제",
+            "cancel": "취소"
+          },
+          "isolate": {
+            "title": "노드 격리",
+            "message": "\"{hostname}\" 노드를 격리하시겠습니까? 해당 노드로의 통신이 중단됩니다.",
+            "isolating": "격리 중…",
+            "confirm": "격리",
+            "cancel": "취소"
+          },
+          "restore": {
+            "title": "노드 복구",
+            "message": "\"{hostname}\" 노드를 복구하시겠습니까? 노드와의 통신이 재개됩니다.",
+            "restoring": "복구 중…",
+            "confirm": "복구",
+            "cancel": "취소"
+          }
+        }
       }
     },
     "infrastructure": {
       "title": "인프라 현황",
-      "description": "FluxCD + tofu-controller를 통해 프로비저닝된 Terraform CR 목록입니다.",
+      "description": "tofu-controller를 통해 프로비저닝된 Terraform CR 목록입니다.",
       "loading": "리소스 목록을 불러오는 중...",
       "syncBtn": "클러스터 동기화",
       "syncing": "동기화 중...",
@@ -213,11 +431,15 @@
       "title": "시스템 설정",
       "sub_title_1": "공지사항 & 배너",
       "tabs": {
-        "tab_1": { "title": "뉴스 관리" },
-        "tab_2": { "title": "배너" }
+        "tab_1": {
+          "title": "뉴스 관리"
+        },
+        "tab_2": {
+          "title": "배너"
+        }
       },
       "news": {
-        "add": "+ 뉴스 등록",
+        "add": "뉴스 등록",
         "loading": "로딩 중…",
         "empty": "등록된 뉴스가 없습니다.",
         "backToList": "← 목록으로",
@@ -238,15 +460,26 @@
           "published": "노출",
           "createdAt": "작성일"
         },
-        "actions": { "edit": "수정", "delete": "삭제" },
-        "status": { "visible": "노출", "hidden": "숨김" },
+        "actions": {
+          "edit": "수정",
+          "delete": "삭제"
+        },
+        "status": {
+          "visible": "노출",
+          "hidden": "숨김"
+        },
         "deleteConfirm": {
           "title": "뉴스 삭제",
           "message": "\"{title}\" 을 삭제하시겠습니까?",
           "confirm": "삭제",
           "cancel": "취소"
         },
-        "categories": ["공지", "업데이트", "점검", "보안"]
+        "categories": [
+          "공지",
+          "업데이트",
+          "점검",
+          "보안"
+        ]
       },
       "banner": {
         "preview": "미리보기",
@@ -261,15 +494,23 @@
       }
     }
   },
-"Dashboard": {
+  "Dashboard": {
     "title": "대시보드",
-    "sidebar": [{ "label": "대시보드 홈", "path": "/dashboard" }],
+    "sidebar": [
+      {
+        "label": "대시보드 홈",
+        "path": "/dashboard"
+      }
+    ],
     "placeholder": "대시보드 메인 페이지 콘텐츠를 여기에 추가하세요."
   },
   "Billing": {
     "title": "청구",
     "sidebar": [
-      { "label": "청구", "path": "/billing" }
+      {
+        "label": "청구",
+        "path": "/billing"
+      }
     ],
     "description": "리소스 사용량과 청구 내역을 확인합니다.",
     "summary": {
@@ -277,19 +518,35 @@
       "cpu": "CPU",
       "storage": "스토리지",
       "network": "네트워크",
-      "unit": { "cpu": "core·h", "storage": "GB", "network": "GB" }
+      "unit": {
+        "cpu": "core·h",
+        "storage": "GB",
+        "network": "GB"
+      }
     },
     "history": {
       "title": "청구 내역",
       "empty": "청구 내역이 없습니다.",
-      "columns": { "period": "기간", "amount": "금액", "status": "상태", "issued": "발행일" }
+      "columns": {
+        "period": "기간",
+        "amount": "금액",
+        "status": "상태",
+        "issued": "발행일"
+      }
     },
-    "status": { "paid": "완납", "pending": "대기", "overdue": "연체" }
+    "status": {
+      "paid": "완납",
+      "pending": "대기",
+      "overdue": "연체"
+    }
   },
   "UserSettings": {
     "title": "설정",
     "sidebar": [
-      { "label": "설정", "path": "/settings" }
+      {
+        "label": "설정",
+        "path": "/settings"
+      }
     ],
     "description": "계정 환경설정을 관리합니다.",
     "profile": {
@@ -303,24 +560,45 @@
       "title": "환경설정",
       "language": "언어",
       "languageOptions": [
-        { "value": "en", "label": "English" },
-        { "value": "ko", "label": "한국어" }
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "ko",
+          "label": "한국어"
+        }
       ]
     }
   },
   "Instances": {
     "title": "인스턴스",
     "sidebar": [
-      { "label": "인스턴스", "path": "/instances" },
-      { "label": "인스턴스 목록", "path": "/instances?view=list" }
+      {
+        "label": "인스턴스",
+        "path": "/instances"
+      },
+      {
+        "label": "인스턴스 목록",
+        "path": "/instances?view=list"
+      }
     ],
     "intro": {
       "title": "클라우드 인스턴스",
-      "description": "Proxmox 기반의 가상 머신을 생성하고 관리할 수 있습니다.\nFluxCD + OpenTofu를 통해 인프라를 코드로 프로비저닝하며,\n생성 상태를 실시간으로 확인할 수 있습니다.",
+      "description": "Proxmox 기반의 가상 머신을 생성하고 관리할 수 있습니다.\ntofu-controller를 통해 인프라를 코드로 프로비저닝하며,\n생성 상태를 실시간으로 확인할 수 있습니다.",
       "features": [
-        { "title": "빠른 배포", "desc": "GitOps 기반 자동화 프로비저닝" },
-        { "title": "안전한 관리", "desc": "사용자별 격리된 인스턴스 환경" },
-        { "title": "실시간 모니터링", "desc": "CR 상태를 실시간으로 추적" }
+        {
+          "title": "빠른 배포",
+          "desc": "GitOps 기반 자동화 프로비저닝"
+        },
+        {
+          "title": "안전한 관리",
+          "desc": "사용자별 격리된 인스턴스 환경"
+        },
+        {
+          "title": "실시간 모니터링",
+          "desc": "CR 상태를 실시간으로 추적"
+        }
       ],
       "viewList": "인스턴스 목록 보기",
       "loginRequired": "인스턴스를 생성하려면 로그인이 필요합니다."
@@ -360,7 +638,7 @@
       "title": "인스턴스 목록",
       "description": "프로비저닝된 인스턴스 목록입니다.",
       "refresh": "새로고침",
-      "add": "+ 인스턴스 추가",
+      "add": "인스턴스 추가",
       "deleteSelected": "선택 삭제 ({count})",
       "tabs": {
         "active": "활성 인스턴스",
@@ -401,7 +679,9 @@
         "console": "콘솔",
         "edit": "수정",
         "stop": "정지",
-        "delete": "삭제"
+        "delete": "삭제",
+        "semaphore": "Semaphore 로그",
+        "semaphoreNoOutput": "출력 없음"
       },
       "notReady": "해당 기능은 준비 중입니다.",
       "deleteFailed": "삭제 실패",
@@ -415,6 +695,174 @@
         "confirm": "삭제",
         "cancel": "취소"
       }
+    }
+  },
+  "Network": {
+    "title": "네트워크",
+    "sidebar": [
+      {
+        "label": "네트워크",
+        "path": "/network"
+      }
+    ],
+    "intro": {
+      "title": "가상 네트워크",
+      "description": "가상 네트워크, 서브넷, 라우팅을 정의하고 관리하세요.\n클라우드 리소스 간 트래픽을 격리하고 제어합니다.",
+      "features": [
+        {
+          "title": "네트워크 격리",
+          "desc": "프라이빗 VNet으로 환경 분리"
+        },
+        {
+          "title": "커스텀 라우팅",
+          "desc": "라우팅 규칙 및 게이트웨이 정의"
+        },
+        {
+          "title": "서브넷 관리",
+          "desc": "서브넷으로 리소스 구성"
+        }
+      ],
+      "loginRequired": "네트워크를 관리하려면 로그인하세요."
+    }
+  },
+  "Firewall": {
+    "title": "방화벽",
+    "sidebar": [
+      {
+        "label": "방화벽",
+        "path": "/firewall"
+      }
+    ],
+    "intro": {
+      "title": "방화벽 규칙",
+      "description": "클라우드 리소스의 인바운드 및 아웃바운드 트래픽을 제어하세요.\n보안 그룹과 네트워크 접근 정책을 정의합니다.",
+      "features": [
+        {
+          "title": "인바운드 규칙",
+          "desc": "인입 트래픽 허용 또는 차단"
+        },
+        {
+          "title": "아웃바운드 규칙",
+          "desc": "인스턴스 송신 트래픽 제어"
+        },
+        {
+          "title": "보안 그룹",
+          "desc": "재사용 가능한 정책 그룹화"
+        }
+      ],
+      "loginRequired": "방화벽 규칙을 관리하려면 로그인하세요."
+    }
+  },
+  "Volumes": {
+    "title": "볼륨",
+    "sidebar": [
+      {
+        "label": "볼륨",
+        "path": "/volumes"
+      }
+    ],
+    "intro": {
+      "title": "블록 스토리지 볼륨",
+      "description": "인스턴스를 위한 영구 블록 스토리지를 프로비저닝하고 관리하세요.\n필요에 따라 볼륨을 연결, 분리, 크기 조정할 수 있습니다.",
+      "features": [
+        {
+          "title": "영구 스토리지",
+          "desc": "인스턴스 수명 주기와 독립적 데이터 보존"
+        },
+        {
+          "title": "핫 어태치",
+          "desc": "실행 중인 인스턴스에 볼륨 연결"
+        },
+        {
+          "title": "스냅샷 지원",
+          "desc": "시점 스냅샷 생성"
+        }
+      ],
+      "loginRequired": "볼륨을 관리하려면 로그인하세요."
+    }
+  },
+  "Backups": {
+    "title": "백업",
+    "sidebar": [
+      {
+        "label": "백업",
+        "path": "/backups"
+      }
+    ],
+    "intro": {
+      "title": "자동화된 백업",
+      "description": "인스턴스 및 볼륨의 백업을 예약하고 관리하세요.\n단 한 번의 클릭으로 이전 상태로 복원할 수 있습니다.",
+      "features": [
+        {
+          "title": "예약 백업",
+          "desc": "자동 백업 주기 설정"
+        },
+        {
+          "title": "증분 백업",
+          "desc": "증분 방식으로 효율적인 스토리지 사용"
+        },
+        {
+          "title": "원클릭 복원",
+          "desc": "백업에서 인스턴스 복원"
+        }
+      ],
+      "loginRequired": "백업을 관리하려면 로그인하세요."
+    }
+  },
+  "Monitoring": {
+    "title": "모니터링",
+    "sidebar": [
+      {
+        "label": "모니터링",
+        "path": "/monitoring"
+      }
+    ],
+    "intro": {
+      "title": "리소스 모니터링",
+      "description": "인스턴스의 CPU, 메모리, 디스크, 네트워크 메트릭을 모니터링하세요.\n알림을 설정하여 성능 및 가용성을 실시간으로 파악합니다.",
+      "features": [
+        {
+          "title": "실시간 메트릭",
+          "desc": "라이브 리소스 사용량 대시보드"
+        },
+        {
+          "title": "알림",
+          "desc": "임계값 초과 시 알림 수신"
+        },
+        {
+          "title": "이력 분석",
+          "desc": "히스토리 데이터로 트렌드 분석"
+        }
+      ],
+      "loginRequired": "모니터링 데이터를 보려면 로그인하세요."
+    }
+  },
+  "IAM": {
+    "title": "IAM",
+    "sidebar": [
+      {
+        "label": "IAM",
+        "path": "/iam"
+      }
+    ],
+    "intro": {
+      "title": "ID 및 접근 관리",
+      "description": "조직의 사용자, 그룹, 접근 권한을 관리하세요.\n누가 어떤 리소스에 접근하고 어떤 작업을 수행할 수 있는지 제어합니다.",
+      "features": [
+        {
+          "title": "사용자 관리",
+          "desc": "조직 구성원 추가 및 관리"
+        },
+        {
+          "title": "역할 기반 접근",
+          "desc": "권한 제어를 위한 역할 할당"
+        },
+        {
+          "title": "감사 로그",
+          "desc": "접근 및 변경 사항 추적"
+        }
+      ],
+      "loginRequired": "IAM을 관리하려면 로그인하세요."
     }
   }
 }

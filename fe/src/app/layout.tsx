@@ -16,8 +16,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-	title: "OpenCSP::console",
-	description: "OpenCSP",
+	title: "OpenCSP Console",
+	description: "OpenCSP Console",
+	icons: {
+		icon: "/favicon.svg",
+	},
 };
 
 export default function RootLayout({

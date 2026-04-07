@@ -8,6 +8,8 @@ import io.hlab.opencsp.infrastructure.teleport.TeleportClient;
 import io.hlab.opencsp.infrastructure.teleport.TeleportNodeInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -15,10 +17,11 @@ import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.util.Base64;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 /**
  * Teleport Web API 클라이언트.
@@ -31,7 +34,7 @@ import java.util.concurrent.atomic.AtomicReference;
  *   <li>{@code teleport.insecure}   — "true" 이면 TLS 검증 비활성화 (개발환경용)</li>
  * </ul>
  *
- * <p>세션 토큰은 메모리 캐시 후 만료 1시간 전 자동 갱신한다.
+ * <p>세션 토큰과 쿠키는 메모리 캐시 후 만료 1시간 전 자동 갱신한다.
  */
 @Slf4j
 @Component
@@ -41,9 +44,23 @@ public class TeleportHttpClient implements TeleportClient {
     private final ConfigStore configStore;
     private final ObjectMapper objectMapper;
 
-    private final AtomicReference<String> cachedToken    = new AtomicReference<>();
-    private final AtomicReference<Instant> tokenExpiry   = new AtomicReference<>(Instant.EPOCH);
+    private final AtomicReference<String> cachedToken  = new AtomicReference<>();
+    private final AtomicReference<String> cachedCookie = new AtomicReference<>();
+    private final AtomicReference<Instant> tokenExpiry = new AtomicReference<>(Instant.EPOCH);
     private volatile String cachedClusterName;
+
+    @Override
+    public String getSessionCookie() {
+        return cachedCookie.get() != null ? cachedCookie.get() : "";
+    }
+
+    /** 테스트 등 외부에서 획득한 토큰과 쿠키를 캐시에 주입한다. */
+    public void seedToken(String token, String cookie, Instant expiry) {
+        cachedToken.set(token);
+        cachedCookie.set(cookie != null ? cookie : "");
+        tokenExpiry.set(expiry);
+        log.info("Teleport 세션 토큰/쿠키 외부 주입 완료 (만료: {})", expiry);
+    }
 
     // ──────────────────────────────────────────────────────────────────────────
     // TeleportClient 구현
@@ -85,14 +102,19 @@ public class TeleportHttpClient implements TeleportClient {
     @Override
     public Optional<TeleportNodeInfo> findNodeByHostname(String hostname) {
         try {
-            String proxyUrl  = requireProxyUrl();
-            String cluster   = getClusterName();
-            String token     = getOrRefreshToken();
-            WebClient wc     = buildWebClient(proxyUrl);
+            String proxyUrl = requireProxyUrl();
+            String cluster  = getClusterName();
+            String token    = getOrRefreshToken();
+            String cookie   = cachedCookie.get();
+            WebClient wc    = buildWebClient(proxyUrl);
 
             String body = wc.get()
-                    .uri("/v1/webapi/sites/{cluster}/nodes", cluster)
-                    .header("X-Teleport-Auth", token)
+                    .uri(b -> b.path("/v1/webapi/sites/{cluster}/resources")
+                            .queryParam("kinds", "node")
+                            .queryParam("limit", "500")
+                            .build(cluster))
+                    .header("Authorization", "Bearer " + token)
+                    .header("Cookie", cookie != null ? cookie : "")
                     .retrieve()
                     .bodyToMono(String.class)
                     .block();
@@ -100,10 +122,11 @@ public class TeleportHttpClient implements TeleportClient {
             JsonNode items = objectMapper.readTree(body).path("items");
             if (items.isArray()) {
                 for (JsonNode item : items) {
-                    if (hostname.equalsIgnoreCase(item.path("hostname").asText())) {
+                    String itemHostname = item.path("hostname").asText();
+                    if (hostname.equalsIgnoreCase(itemHostname)) {
                         return Optional.of(TeleportNodeInfo.builder()
                                 .id(item.path("id").asText())
-                                .hostname(item.path("hostname").asText())
+                                .hostname(itemHostname)
                                 .addr(item.path("addr").asText())
                                 .clusterName(cluster)
                                 .build());
@@ -124,20 +147,19 @@ public class TeleportHttpClient implements TeleportClient {
             String proxyUrl = requireProxyUrl();
             String cluster  = getClusterName();
 
-            // Teleport params JSON → standard base64 → URL-encode
+            // Reactor Netty가 Cookie 헤더를 정상 전송하므로 세션 인증은 쿠키로 처리된다.
+            // params.token은 bearer 토큰이 아닌 join-session용 one-time token이므로 포함 금지.
             String paramsJson = objectMapper.writeValueAsString(Map.of(
-                    "login",  login,
-                    "term",   Map.of("h", rows, "w", cols),
+                    "login",     login,
                     "server_id", nodeId,
-                    "sid",    teleportSessionId
+                    "term",      Map.of("h", rows, "w", cols)
             ));
-            String b64     = Base64.getEncoder().encodeToString(paramsJson.getBytes(StandardCharsets.UTF_8));
-            String encoded = URLEncoder.encode(b64, StandardCharsets.UTF_8);
+            String encodedParams = URLEncoder.encode(paramsJson, StandardCharsets.UTF_8);
 
             // https → wss, http → ws
             String wsBase = proxyUrl.replaceFirst("^https://", "wss://")
                                     .replaceFirst("^http://",  "ws://");
-            return URI.create(wsBase + "/v1/webapi/sites/" + cluster + "/connect?params=" + encoded);
+            return URI.create(wsBase + "/v1/webapi/sites/" + cluster + "/connect/ws?params=" + encodedParams);
         } catch (Exception e) {
             throw new IllegalStateException("Teleport WebSocket URI 생성 실패", e);
         }
@@ -158,26 +180,38 @@ public class TeleportHttpClient implements TeleportClient {
             String pass = configStore.get(ConfigCategory.IAM, "teleport.bot.pass", "");
 
             WebClient wc = buildWebClient(proxyUrl);
-            String body = wc.post()
-                    .uri("/v1/webapi/sessions/local")
+            ResponseEntity<String> response = wc.post()
+                    .uri("/v1/webapi/sessions/web")
                     .header("Content-Type", "application/json")
                     .bodyValue(Map.of("user", user, "pass", pass, "second_factor_token", ""))
                     .retrieve()
-                    .bodyToMono(String.class)
+                    .toEntity(String.class)
                     .block();
 
-            JsonNode root  = objectMapper.readTree(body);
-            String token   = root.path("token").asText();
+            String body  = response != null ? response.getBody() : "";
+            JsonNode root = objectMapper.readTree(body);
+            String token  = root.path("token").asText();
             if (token.isBlank()) throw new IllegalStateException("Teleport 로그인 응답에 token 없음: " + body);
 
+            String cookie = extractCookieHeader(response);
             cachedToken.set(token);
-            // 1시간 후 만료로 설정 (실제 세션 TTL에 관계없이 안전하게 갱신)
+            cachedCookie.set(cookie);
             tokenExpiry.set(Instant.now().plusSeconds(3600));
-            log.info("Teleport 세션 토큰 갱신 완료");
+            log.info("Teleport 세션 토큰/쿠키 갱신 완료");
             return token;
         } catch (Exception e) {
             throw new IllegalStateException("Teleport 로그인 실패", e);
         }
+    }
+
+    /** Set-Cookie 헤더 목록에서 name=value 부분만 추출해 Cookie 헤더 문자열로 조합한다. */
+    private String extractCookieHeader(ResponseEntity<?> response) {
+        if (response == null) return "";
+        List<String> setCookies = response.getHeaders().get(HttpHeaders.SET_COOKIE);
+        if (setCookies == null || setCookies.isEmpty()) return "";
+        return setCookies.stream()
+                .map(c -> c.split(";")[0])   // "name=value; Path=/" → "name=value"
+                .collect(Collectors.joining("; "));
     }
 
     private String requireProxyUrl() {
@@ -192,7 +226,6 @@ public class TeleportHttpClient implements TeleportClient {
         WebClient.Builder builder = WebClient.builder().baseUrl(baseUrl);
 
         if (insecure) {
-            // 개발환경용 TLS 검증 비활성화
             io.netty.handler.ssl.SslContext sslCtx;
             try {
                 sslCtx = io.netty.handler.ssl.SslContextBuilder.forClient()

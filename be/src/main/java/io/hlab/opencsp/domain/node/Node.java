@@ -1,5 +1,6 @@
 package io.hlab.opencsp.domain.node;
 
+import io.hlab.opencsp.infrastructure.config.EncryptedStringConverter;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -47,6 +48,46 @@ public class Node {
     @Column(length = 500)
     private String description;
 
+    // ─── Proxmox API 연동 ────────────────────────────────────────────────────
+
+    /** Proxmox API 노드명 (짧은 호스트명). 비어 있으면 hostname 사용. */
+    @Column(name = "proxmox_node", length = 100)
+    private String proxmoxNode;
+
+    /** Proxmox API 기본 URL (예: https://192.168.1.10:8006) */
+    @Column(name = "api_url", length = 255)
+    private String apiUrl;
+
+    /** Proxmox API 토큰 (AES 암호화 저장). 형식: USER@REALM!TOKENID=UUID */
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "api_token", length = 1000)
+    private String apiToken;
+
+    // ─── 메트릭 (스케줄러가 주기적으로 갱신) ─────────────────────────────────
+
+    @Column(name = "cpu_usage_percent")
+    private Double cpuUsagePercent;
+
+    @Column(name = "cpu_total")
+    private Integer cpuTotal;
+
+    @Column(name = "mem_used_bytes")
+    private Long memUsedBytes;
+
+    @Column(name = "mem_total_bytes")
+    private Long memTotalBytes;
+
+    @Column(name = "disk_used_bytes")
+    private Long diskUsedBytes;
+
+    @Column(name = "disk_total_bytes")
+    private Long diskTotalBytes;
+
+    @Column(name = "metrics_updated_at")
+    private LocalDateTime metricsUpdatedAt;
+
+    // ─── 타임스탬프 ──────────────────────────────────────────────────────────
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -81,5 +122,38 @@ public class Node {
 
     public void assignTenant(String tenantId) {
         this.tenantId = tenantId;
+    }
+
+    /** API 크레덴셜 업데이트. apiToken 이 blank 이면 기존 값 유지. */
+    public void updateCredentials(String proxmoxNode, String apiUrl, String apiToken) {
+        this.proxmoxNode = proxmoxNode;
+        this.apiUrl = apiUrl;
+        if (apiToken != null && !apiToken.isBlank()) {
+            this.apiToken = apiToken;
+        }
+    }
+
+    /** 메트릭 갱신 (스케줄러 호출용). */
+    public void updateMetrics(double cpuUsagePercent, int cpuTotal,
+                              long memUsedBytes, long memTotalBytes,
+                              long diskUsedBytes, long diskTotalBytes) {
+        this.cpuUsagePercent = cpuUsagePercent;
+        this.cpuTotal = cpuTotal;
+        this.memUsedBytes = memUsedBytes;
+        this.memTotalBytes = memTotalBytes;
+        this.diskUsedBytes = diskUsedBytes;
+        this.diskTotalBytes = diskTotalBytes;
+        this.metricsUpdatedAt = LocalDateTime.now();
+    }
+
+    /** Proxmox API 호출 시 사용할 노드명. proxmoxNode 가 비어 있으면 hostname 반환. */
+    public String effectiveProxmoxNode() {
+        return (proxmoxNode != null && !proxmoxNode.isBlank()) ? proxmoxNode : hostname;
+    }
+
+    /** API 크레덴셜이 설정되어 있는지 여부. */
+    public boolean hasApiCredentials() {
+        return apiUrl != null && !apiUrl.isBlank()
+                && apiToken != null && !apiToken.isBlank();
     }
 }

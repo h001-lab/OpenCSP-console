@@ -254,6 +254,28 @@ public class TofuControllerProvisioningClient implements ProvisioningClient {
     }
 
     @Override
+    public void deleteTfStateSecret(String crName) {
+        String secretName = "tfstate-default-" + crName;
+        String uri = "/api/v1/namespaces/" + fluxNamespace + "/secrets/" + secretName;
+        try {
+            createWebClient().delete()
+                    .uri(uri)
+                    .retrieve()
+                    .bodyToMono(Void.class)
+                    .block();
+            log.info("tfstate Secret 삭제 완료: secretName={}", secretName);
+        } catch (WebClientResponseException e) {
+            if (e.getStatusCode().value() == 404) {
+                log.debug("tfstate Secret 이미 없음 (정상): secretName={}", secretName);
+                return;
+            }
+            log.warn("tfstate Secret 삭제 실패: secretName={}, status={}", secretName, e.getStatusCode());
+        } catch (Exception e) {
+            log.warn("tfstate Secret 삭제 실패: secretName={}, error={}", secretName, e.getMessage());
+        }
+    }
+
+    @Override
     @SuppressWarnings("unchecked")
     public Map<String, OutputEntry> getOutputs(String crName) {
         // 1. status.outputs 시도 (일부 tofu-controller 버전)

@@ -7,7 +7,9 @@ import io.hlab.opencsp.application.provision.ProvisionSummary;
 import io.hlab.opencsp.application.provision.ProvisioningService;
 import io.hlab.opencsp.common.dto.ApiResponse;
 import io.hlab.opencsp.common.web.RequestUtils;
+import io.hlab.opencsp.domain.config.ConfigCategory;
 import io.hlab.opencsp.domain.provision.ProvisionHistoryRepository;
+import io.hlab.opencsp.infrastructure.config.ConfigStore;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -36,6 +38,7 @@ public class ProvisionController {
 
     private final ProvisioningService provisioningService;
     private final ProvisionHistoryRepository provisionHistoryRepository;
+    private final ConfigStore configStore;
 
     @GetMapping
     @Operation(summary = "내 프로비저닝 목록 조회", description = "현재 유저의 DB 기록과 k8s 실시간 상태를 합쳐 반환한다.")
@@ -55,6 +58,13 @@ public class ProvisionController {
         List<ProvisionHistoryResponse> result = provisionHistoryRepository.findByUserId(userId)
                 .stream().map(ProvisionHistoryResponse::from).toList();
         return ApiResponse.success(result);
+    }
+
+    @GetMapping("/access-config")
+    @Operation(summary = "SSH 접근 설정 조회", description = "tsh SSH 접근에 필요한 Teleport proxy URL 등 설정을 반환한다.")
+    public ApiResponse<Map<String, String>> getAccessConfig() {
+        String proxyUrl = configStore.get(ConfigCategory.IAM, "teleport.proxy.url", "");
+        return ApiResponse.success(Map.of("teleportProxyUrl", proxyUrl));
     }
 
     @GetMapping("/next-vm-id")
