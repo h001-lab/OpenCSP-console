@@ -3,6 +3,7 @@ package io.hlab.opencsp.infrastructure.persistence.provision;
 import io.hlab.opencsp.domain.provision.Provision;
 import io.hlab.opencsp.domain.provision.ProvisionRepository;
 import io.hlab.opencsp.domain.provision.ProvisionStatus;
+import io.hlab.opencsp.domain.provision.SemaphoreStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -38,6 +39,11 @@ public class ProvisionJpaRepository implements ProvisionRepository {
     @Override
     public List<Provision> findByStatus(ProvisionStatus status) {
         return jpa.findByStatus(status);
+    }
+
+    @Override
+    public List<Provision> findBySemaphoreStatus(SemaphoreStatus semaphoreStatus) {
+        return jpa.findBySemaphoreStatus(semaphoreStatus);
     }
 
     @Override

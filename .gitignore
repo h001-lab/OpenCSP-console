@@ -16,3 +16,4 @@ logs/
 data/
 *.log
 *.db
+*.db-*

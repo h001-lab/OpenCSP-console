@@ -9,6 +9,7 @@ public interface ProvisionRepository {
     List<Provision> findAll();
     List<Provision> findByUserId(String userId);
     List<Provision> findByStatus(ProvisionStatus status);
+    List<Provision> findBySemaphoreStatus(SemaphoreStatus semaphoreStatus);
     void deleteByCrName(String crName);
     Optional<Long> findMaxVmId();
 }

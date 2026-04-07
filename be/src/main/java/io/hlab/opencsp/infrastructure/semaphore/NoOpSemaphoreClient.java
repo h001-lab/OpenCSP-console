@@ -19,8 +19,18 @@ public class NoOpSemaphoreClient implements SemaphoreClient {
     public boolean isConfigured() { return false; }
 
     @Override
-    public int triggerPostProvisionJob(String crName, Map<String, String> outputs) {
+    public PostProvisionResult triggerPostProvisionJob(String crName, Map<String, String> outputs) {
         log.warn("[Semaphore] 미설정 상태 — post-provisioning 건너뜀: crName={}", crName);
-        return -1;
+        return new PostProvisionResult(-1, -1, -1, -1, -1);
+    }
+
+    @Override
+    public void cleanupPostProvision(int sshKeyId, int templateId, int inventoryId, int environmentId) {
+        log.debug("[Semaphore] 미설정 상태 — cleanup 건너뜀");
+    }
+
+    @Override
+    public TaskResult getTaskResult(int taskId) {
+        return new TaskResult("noop", false, "Semaphore not configured");
     }
 }

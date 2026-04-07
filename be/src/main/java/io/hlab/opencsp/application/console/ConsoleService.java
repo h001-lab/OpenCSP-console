@@ -6,6 +6,7 @@ import io.hlab.opencsp.domain.provision.Provision;
 import io.hlab.opencsp.domain.provision.ProvisionRepository;
 import io.hlab.opencsp.infrastructure.teleport.TeleportClient;
 import io.hlab.opencsp.infrastructure.teleport.TeleportNodeInfo;
+import io.hlab.opencsp.infrastructure.teleport.tsh.TshCertManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,7 @@ public class ConsoleService {
     private final ConsoleSessionRepository consoleSessionRepository;
     private final ProvisionRepository provisionRepository;
     private final TeleportClient teleportClient;
+    private final TshCertManager tshCertManager;
 
     /**
      * 콘솔 세션을 생성한다.
@@ -49,8 +51,8 @@ public class ConsoleService {
             throw new IllegalStateException("VM 호스트명이 없습니다. Teleport 연결 불가: crName=" + crName);
         }
 
-        // Teleport 노드 조회
-        TeleportNodeInfo nodeInfo = teleportClient.findNodeByHostname(vmHostname)
+        // Teleport 노드 조회 — tsh ls 사용 (임시: Go Adapter 전환 시 교체)
+        TeleportNodeInfo nodeInfo = tshCertManager.findNodeByHostname(vmHostname)
                 .orElseThrow(() -> new IllegalStateException(
                         "Teleport에서 노드를 찾을 수 없습니다: hostname=" + vmHostname));
 

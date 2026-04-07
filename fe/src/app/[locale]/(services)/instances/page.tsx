@@ -10,8 +10,7 @@ import { useAuthStore } from "@/stores/authStore";
 
 const TerminalOverlay = dynamic(() => import("@/components/Console/TerminalOverlay"), { ssr: false });
 
-// ─── 타입 ───────────────────────────────────────────────────────────────────
-
+// 타입
 interface K8sCondition {
   type: string;
   status: string;
@@ -19,14 +18,20 @@ interface K8sCondition {
   message?: string;
 }
 
+type SemaphoreStatus = "PENDING" | "RUNNING" | "SUCCESS" | "FAILED";
+
 interface ProvisionSummary {
   id: number;
+  provisionTaskId: string | null;
   crName: string;
   moduleType: string;
   userId: string;
   vmId: number | null;
   proxmoxNode: string | null;
+  vmHostname: string | null;
   status: string;
+  semaphoreStatus: SemaphoreStatus | null;
+  semaphoreTaskId: number | null;
   createdAt: string;
   updatedAt: string;
   liveStatus?: { conditions?: K8sCondition[] } | null;
@@ -85,7 +90,7 @@ interface InstancesMessages {
   detail: {
     backToList: string;
     fields: { vmId: string; crName: string; moduleType: string; node: string; userId: string; status: string; createdAt: string; updatedAt: string };
-    actions: { console: string; edit: string; stop: string; delete: string };
+    actions: { console: string; edit: string; stop: string; delete: string; semaphore?: string; semaphoreNoOutput?: string };
     notReady: string;
     deleteFailed: string;
     terraformError: string;
@@ -220,12 +225,30 @@ function statusTagType(status?: string): TagType {
   }
 }
 
+function SemaphoreStatusBadge({ status, taskId }: { status: SemaphoreStatus | null; taskId: number | null }) {
+  if (!status) return <span className="text-gray-300 text-xs">—</span>;
+  const cfg: Record<SemaphoreStatus, { label: string; cls: string }> = {
+    PENDING: { label: "Pending",  cls: "bg-gray-100 text-gray-500 border-gray-200" },
+    RUNNING: { label: "Running",  cls: "bg-yellow-50 text-yellow-700 border-yellow-200" },
+    SUCCESS: { label: "Success",  cls: "bg-green-50 text-green-700 border-green-200" },
+    FAILED:  { label: "Failed",   cls: "bg-red-50 text-red-700 border-red-200" },
+  };
+  const { label, cls } = cfg[status];
+  return (
+    <span className={`inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded border font-mono ${cls}`}
+      title={taskId != null ? `Semaphore Task #${taskId}` : undefined}>
+      {status === "RUNNING" && <span className="animate-pulse">●</span>}
+      {label}
+      {taskId != null && <span className="opacity-60">#{taskId}</span>}
+    </span>
+  );
+}
+
 const DEFAULT_MODULE_TYPE = "proxmox-vm";
 const DEFAULT_GIT_REPO    = "flux-system";
 const PAGE_SIZE_OPTIONS   = [5, 10, 25];
 
-// ─── VM 폼 ────────────────────────────────────────────────────────────────
-
+// VM 폼
 function ProvisionCreateView({ onBack, onCreated }: { onBack: () => void; onCreated: () => void }) {
   const t = (useMsg("Instances") as unknown as InstancesMessages | undefined)?.create;
   const [submitting, setSubmitting] = useState(false);
@@ -387,8 +410,7 @@ function ProvisionCreateView({ onBack, onCreated }: { onBack: () => void; onCrea
   );
 }
 
-// ─── 소개 뷰 ───────────────────────────────────────────────────────────────
-
+// 소개 뷰
 function IntroView({ isAuthenticated }: { isAuthenticated: boolean }) {
   const t = (useMsg("Instances") as unknown as InstancesMessages | undefined)?.intro;
   if (!t) return null;
@@ -436,6 +458,42 @@ function InstanceDetail({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting]           = useState(false);
   const [consoleOpen, setConsoleOpen]     = useState(false);
+
+  // Semaphore task 결과
+  const [semaphoreResult, setSemaphoreResult] = useState<{
+    status: string; success: boolean; output: string; taskId: number | null;
+  } | null>(null);
+  const [semaphoreLoading, setSemaphoreLoading] = useState(false);
+  const [semaphoreOpen, setSemaphoreOpen]       = useState(false);
+
+  // SSH 접근 스크립트
+  const [teleportProxyUrl, setTeleportProxyUrl] = useState("");
+  const [sshUser, setSshUser]                   = useState("ubuntu");
+  const [scriptOpen, setScriptOpen]             = useState(false);
+  const [curlCopied, setCurlCopied]             = useState(false);
+  const [scriptCopied, setScriptCopied]         = useState(false);
+
+  useEffect(() => {
+    fetch("/api/provisions/access-config")
+      .then(r => r.json())
+      .then(json => setTeleportProxyUrl(json.data?.teleportProxyUrl ?? ""))
+      .catch(() => {});
+  }, []);
+
+  async function handleSemaphoreSync() {
+    setSemaphoreLoading(true);
+    try {
+      const res = await fetch(`/api/admin/provisions/${provision.crName}/semaphore`);
+      const json = await res.json();
+      setSemaphoreResult(json.data ?? json);
+      setSemaphoreOpen(true);
+    } catch {
+      setSemaphoreResult({ status: "error", success: false, output: "Request failed", taskId: null });
+      setSemaphoreOpen(true);
+    } finally {
+      setSemaphoreLoading(false);
+    }
+  }
 
   if (!t) return null;
 
@@ -520,10 +578,123 @@ function InstanceDetail({
         <Button variant="outline" size="sm" disabled={!isActive} onClick={() => alert(t.notReady)}>
           {t.actions.stop}
         </Button>
+        <Button variant="outline" size="sm" onClick={handleSemaphoreSync} disabled={semaphoreLoading}>
+          {semaphoreLoading ? "..." : t.actions.semaphore ?? "Semaphore Log"}
+        </Button>
         <Button variant="destructive" size="sm" disabled={!isActive} onClick={() => setConfirmDelete(true)}>
           {t.actions.delete}
         </Button>
       </div>
+
+      {semaphoreOpen && semaphoreResult && (
+        <div className="mt-4 bg-white rounded-lg border overflow-hidden">
+          <div className="px-4 py-3 border-b bg-gray-50 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-gray-700">Semaphore Task</span>
+              {semaphoreResult.taskId != null && (
+                <span className="text-xs font-mono text-gray-400">#{semaphoreResult.taskId}</span>
+              )}
+              <span className={`text-xs px-2 py-0.5 rounded border font-mono ${
+                semaphoreResult.status === "success"
+                  ? "bg-green-50 text-green-700 border-green-200"
+                  : semaphoreResult.status === "error" || semaphoreResult.status === "failed"
+                  ? "bg-red-50 text-red-700 border-red-200"
+                  : semaphoreResult.status === "not_triggered"
+                  ? "bg-gray-50 text-gray-500 border-gray-200"
+                  : "bg-yellow-50 text-yellow-700 border-yellow-200"
+              }`}>
+                {semaphoreResult.status}
+              </span>
+            </div>
+            <button onClick={() => setSemaphoreOpen(false)} className="text-gray-400 hover:text-gray-600 text-xs">✕</button>
+          </div>
+          {semaphoreResult.output ? (
+            <pre className="p-4 text-xs font-mono text-gray-700 bg-gray-950 text-green-400 overflow-x-auto whitespace-pre-wrap max-h-96 overflow-y-auto">
+              {semaphoreResult.output}
+            </pre>
+          ) : (
+            <p className="p-4 text-xs text-gray-400">{t.actions.semaphoreNoOutput ?? "No output available"}</p>
+          )}
+        </div>
+      )}
+
+      {/* SSH 접근 가이드 */}
+      {provision.status === "APPLIED" && provision.vmHostname && (() => {
+        const installUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/api/install?proxy=${encodeURIComponent(teleportProxyUrl)}&host=${encodeURIComponent(provision.vmHostname ?? "")}&user=${encodeURIComponent(sshUser)}`;
+        const curlCmd    = `curl -sL "${installUrl}" | bash`;
+        // 스크립트가 ~/.ssh/config에 short hostname alias를 추가하므로 짧은 형식으로 표시
+        const sshCmd     = `ssh ${sshUser}@${provision.vmHostname}`;
+        return (
+          <div className="mt-4 bg-white rounded-lg border overflow-hidden">
+            <div className="px-4 py-3 border-b bg-gray-50 flex items-center justify-between">
+              <span className="text-xs font-semibold text-gray-700">SSH Access</span>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  <label className="text-xs text-gray-500">User</label>
+                  <input
+                    className="border rounded px-2 py-1 text-xs font-mono w-24 focus:outline-none focus:ring-1 focus:ring-blue-300"
+                    value={sshUser}
+                    onChange={e => setSshUser(e.target.value)}
+                  />
+                </div>
+                <button onClick={() => setScriptOpen(v => !v)}
+                  className="text-xs text-gray-500 hover:text-gray-800 underline underline-offset-2">
+                  {scriptOpen ? "Hide script" : "Show script"}
+                </button>
+              </div>
+            </div>
+            <div className="p-4 flex flex-col gap-3">
+              {/* curl 명령어 */}
+              <div>
+                <p className="text-xs text-gray-500 mb-1.5">Run once to install tsh and configure SSH:</p>
+                <div className="flex items-center gap-2 bg-gray-950 rounded px-3 py-2.5">
+                  <code className="flex-1 text-xs text-green-400 font-mono truncate">{curlCmd}</code>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(curlCmd); setCurlCopied(true); setTimeout(() => setCurlCopied(false), 2000); }}
+                    className="shrink-0 text-xs text-gray-400 hover:text-white px-2 py-1 rounded border border-gray-700 hover:border-gray-500 transition-colors"
+                  >
+                    {curlCopied ? "✓" : "Copy"}
+                  </button>
+                </div>
+              </div>
+
+              {/* SSH 명령어 */}
+              <div>
+                <p className="text-xs text-gray-500 mb-1.5">Then connect:</p>
+                <div className="flex items-center gap-2 bg-gray-950 rounded px-3 py-2.5">
+                  <code className="flex-1 text-xs text-green-400 font-mono">{sshCmd}</code>
+                  <button
+                    onClick={() => navigator.clipboard.writeText(sshCmd)}
+                    className="shrink-0 text-xs text-gray-400 hover:text-white px-2 py-1 rounded border border-gray-700 hover:border-gray-500 transition-colors"
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+
+              {/* 전체 스크립트 토글 */}
+              {scriptOpen && (
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-xs text-gray-500">Full script</p>
+                    <button
+                      onClick={() => { fetch(installUrl).then(r => r.text()).then(s => { navigator.clipboard.writeText(s); setScriptCopied(true); setTimeout(() => setScriptCopied(false), 2000); }); }}
+                      className="text-xs text-gray-400 hover:text-gray-700 underline"
+                    >
+                      {scriptCopied ? "✓ Copied" : "Copy script"}
+                    </button>
+                  </div>
+                  <iframe
+                    src={installUrl}
+                    className="w-full h-72 rounded border border-gray-800 bg-gray-950 text-xs font-mono"
+                    title="install script"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {consoleOpen && (
         <TerminalOverlay crName={provision.crName} login="root" onClose={() => setConsoleOpen(false)} />
@@ -660,6 +831,7 @@ function InstanceTable({
                   </th>
                 ))}
                 <th className="text-left px-4 py-2 font-medium">{t.columns.status}</th>
+                <th className="text-left px-4 py-2 font-medium">Ansible</th>
               </tr>
             </thead>
             <tbody>
@@ -689,6 +861,9 @@ function InstanceTable({
                         </span>
                       )}
                     </div>
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <SemaphoreStatusBadge status={item.semaphoreStatus} taskId={item.semaphoreTaskId} />
                   </td>
                 </tr>
               ))}
@@ -737,6 +912,26 @@ export default function InstancesPage() {
   useEffect(() => {
     if (isAuthenticated) fetchProvisions();
   }, [isAuthenticated]);
+
+  // PENDING/APPLYING/DESTROYING 상태가 있을 때 30초마다 자동 갱신 (스피너 없이 백그라운드 fetch)
+  useEffect(() => {
+    if (!isAuthenticated || !showList || creating || detail !== null) return;
+    const hasInProgress = provisions.some((p) =>
+      ["PENDING", "APPLYING", "DESTROYING"].includes(p.status)
+    );
+    if (!hasInProgress) return;
+
+    const id = setInterval(async () => {
+      try {
+        const res = await fetch("/api/provisions");
+        const json = await res.json();
+        setProvisions(json.data ?? []);
+      } catch {
+        // 백그라운드 폴링 오류는 무시
+      }
+    }, 30_000);
+    return () => clearInterval(id);
+  }, [isAuthenticated, showList, creating, detail, provisions]);
 
   if (!instancesMsg) return null;
 

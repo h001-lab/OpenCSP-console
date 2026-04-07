@@ -166,24 +166,23 @@ export default function TerminalOverlay({ crName, login = "root", onClose }: Pro
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-black/90 backdrop-blur-sm">
       {/* 헤더 */}
-      <div className="flex items-center justify-between px-4 py-2 bg-[#1e1e2e] border-b border-white/10 shrink-0">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 px-4 py-2 bg-[#1e1e2e] border-b border-white/10 shrink-0">
+        <button
+          onClick={onClose}
+          style={{ background: "rgba(255,255,255,0.15)" }}
+          className="flex items-center justify-center w-7 h-7 rounded text-white hover:brightness-125 transition-all shrink-0"
+          title="닫기"
+        >
+          <span className="text-base leading-none select-none">←</span>
+        </button>
+        <div className="flex items-center gap-3 flex-1">
           <span className="text-white/60 text-xs font-mono">콘솔</span>
           <span className="text-white text-xs font-mono font-semibold">{crName}</span>
           <span className="text-white/40 text-xs font-mono">@{login}</span>
         </div>
-        <div className="flex items-center gap-3">
-          <span className={`text-xs font-medium ${statusColor[status]}`}>
-            ● {statusLabel[status]}
-          </span>
-          <button
-            onClick={onClose}
-            className="text-white/50 hover:text-white text-xl leading-none transition-colors"
-            title="닫기"
-          >
-            ✕
-          </button>
-        </div>
+        <span className={`text-xs font-medium ${statusColor[status]}`}>
+          ● {statusLabel[status]}
+        </span>
       </div>
 
       {/* 터미널 영역 */}

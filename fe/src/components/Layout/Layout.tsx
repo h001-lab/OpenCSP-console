@@ -3,6 +3,7 @@
 import { NotificationBanner, Sidebar, SideBarItem } from "@h001/ui";
 import { Header } from "@/components/Layout/Header";
 import { Link, useMsg } from "@/providers/MessagesProvider";
+import Image from "next/image";
 import { PropsWithChildren, useState } from "react";
 import { LoginButton } from "@/components/auth/LoginButton";
 import { ServiceSearch } from "@/components/Layout/ServiceSearch";
@@ -64,7 +65,8 @@ export default function Layout({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <Link href="/" className="font-medium text-lg hover:opacity-75 transition-opacity">
+            <Link href="/" className="flex items-center gap-1.5 font-medium text-lg hover:opacity-75 transition-opacity">
+              {/* <Image src="/favicon.svg" alt="OpenCSP" width={22} height={22} /> */}
               {nav.title as string}
             </Link>
             <ServiceSearch />

@@ -1,8 +1,7 @@
 import { getToken } from "next-auth/jwt";
 import { headers } from "next/headers";
 import { NextRequest } from "next/server";
-
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8080";
+import { getBackendUrl } from "./backend-store";
 
 export async function callBackend(
   path: string,
@@ -20,5 +19,5 @@ export async function callBackend(
     ...(token?.accessToken ? { Authorization: `Bearer ${token.accessToken}` } : {}),
   };
 
-  return fetch(`${BACKEND_URL}${path}`, { ...options, headers: reqHeaders });
+  return fetch(`${getBackendUrl()}${path}`, { ...options, headers: reqHeaders });
 }

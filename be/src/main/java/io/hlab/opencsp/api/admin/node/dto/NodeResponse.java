@@ -13,6 +13,16 @@ public record NodeResponse(
         NodeType type,
         NodeStatus status,
         String description,
+        String proxmoxNode,
+        String apiUrl,
+        boolean hasCredentials,
+        Double cpuUsagePercent,
+        Integer cpuTotal,
+        Long memUsedBytes,
+        Long memTotalBytes,
+        Long diskUsedBytes,
+        Long diskTotalBytes,
+        LocalDateTime metricsUpdatedAt,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
@@ -25,6 +35,16 @@ public record NodeResponse(
                 node.getType(),
                 node.getStatus(),
                 node.getDescription(),
+                node.getProxmoxNode(),
+                node.getApiUrl(),
+                node.hasApiCredentials(),
+                node.getCpuUsagePercent(),
+                node.getCpuTotal(),
+                node.getMemUsedBytes(),
+                node.getMemTotalBytes(),
+                node.getDiskUsedBytes(),
+                node.getDiskTotalBytes(),
+                node.getMetricsUpdatedAt(),
                 node.getCreatedAt(),
                 node.getUpdatedAt()
         );

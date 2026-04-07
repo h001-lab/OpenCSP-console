@@ -23,6 +23,10 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME:sa}
     password: ${SPRING_DATASOURCE_PASSWORD:}
     driver-class-name: ${SPRING_DATASOURCE_DRIVER:org.h2.Driver}
+    hikari:
+      # SQLite는 동시 쓰기를 지원하지 않으므로 커넥션 1개로 제한
+      # H2/PostgreSQL/MySQL 사용 시 이 값을 늘려야 함
+      maximum-pool-size: ${SPRING_DATASOURCE_POOL_SIZE:1}
 
   jpa:
     hibernate:
@@ -74,8 +78,10 @@ logging:
       hlab:
         opencsp:
           infrastructure:
-            security: DEBUG
-            iam: DEBUG
+            security: INFO
+            iam: INFO
+            teleport: DEBUG
+            k8s: DEBUG
     org:
       springframework:
         ai:

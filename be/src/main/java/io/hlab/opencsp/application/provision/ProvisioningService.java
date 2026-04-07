@@ -1,5 +1,7 @@
 package io.hlab.opencsp.application.provision;
 
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.KeyPair;
 import io.hlab.opencsp.domain.provision.Provision;
 import io.hlab.opencsp.domain.provision.ProvisionHistory;
 import io.hlab.opencsp.domain.provision.ProvisionHistoryRepository;
@@ -7,13 +9,16 @@ import io.hlab.opencsp.domain.provision.ProvisionOutput;
 import io.hlab.opencsp.domain.provision.ProvisionOutputRepository;
 import io.hlab.opencsp.domain.provision.ProvisionRepository;
 import io.hlab.opencsp.domain.provision.ProvisionStatus;
+import io.hlab.opencsp.domain.provision.SemaphoreStatus;
 import io.hlab.opencsp.infrastructure.k8s.ProvisionRequest;
 import io.hlab.opencsp.infrastructure.k8s.ProvisioningClient;
 import io.hlab.opencsp.infrastructure.semaphore.SemaphoreClient;
+import java.io.ByteArrayOutputStream;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -67,9 +72,23 @@ public class ProvisioningService {
                 : buildCrName(moduleType, userId);
 
         // 빈 문자열 var는 Terraform에서 null 체크를 우회할 수 있으므로 제거
-        Map<String, Object> sanitizedVars = vars.entrySet().stream()
+        Map<String, Object> sanitizedVars = new HashMap<>(vars.entrySet().stream()
                 .filter(e -> e.getValue() != null && !e.getValue().toString().isBlank())
-                .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+
+        // opencsp_ansible_public_key 미제공 시 BE에서 RSA 키 쌍 생성 — private key는 ProvisionOutput에 저장
+        // vm_ssh_public_key는 terraform-secrets(Flux 관리)에서 오는 runner 키이므로 건드리지 않음
+        String generatedPrivateKey = null;
+        if (!sanitizedVars.containsKey("opencsp_ansible_public_key")) {
+            try {
+                SshKeyPair pair = generateSshKeyPair(crName);
+                sanitizedVars.put("opencsp_ansible_public_key", pair.publicKey());
+                generatedPrivateKey = pair.privateKey();
+                log.info("[provision] Ansible SSH 키 쌍 생성: crName={}", crName);
+            } catch (Exception e) {
+                log.warn("[provision] Ansible SSH 키 쌍 생성 실패, 키 없이 진행: crName={}", crName, e);
+            }
+        }
 
         ProvisionRequest request = ProvisionRequest.builder()
                 .moduleType(moduleType)
@@ -92,10 +111,16 @@ public class ProvisioningService {
         String vmHostname = Optional.ofNullable(sanitizedVars.get("vm_name"))
                 .map(Object::toString)
                 .orElse(null);
-        log.info("Provision 저장: crName={}, userId={}, vmId={}, proxmoxNode={}, vmHostname={}",
-                crName, userId, vmId, proxmoxNode, vmHostname);
         Provision saved = provisionRepository.save(Provision.create(crName, moduleType, fluxNamespace, gitRepositoryName, userId, vmId, proxmoxNode, vmHostname));
         provisionHistoryRepository.save(ProvisionHistory.created(saved));
+        log.info("[taskId={}] Provision 저장: crName={}, userId={}, vmId={}, proxmoxNode={}, vmHostname={}",
+                saved.getProvisionTaskId(), crName, userId, vmId, proxmoxNode, vmHostname);
+
+        // 생성한 private key를 ProvisionOutput에 sensitive로 저장
+        if (generatedPrivateKey != null) {
+            provisionOutputRepository.save(
+                    ProvisionOutput.of(crName, "vm_ssh_private_key", generatedPrivateKey, "string", true));
+        }
 
         return crName;
     }
@@ -270,7 +295,8 @@ public class ProvisioningService {
 
                 if (next != provision.getStatus()) {
                     ProvisionStatus prev = provision.getStatus();
-                    log.info("Provision 상태 동기화: crName={}, {} → {}", provision.getCrName(), prev, next);
+                    log.info("[taskId={}] Provision 상태 동기화: crName={}, {} → {}",
+                            provision.getProvisionTaskId(), provision.getCrName(), prev, next);
 
                     if (next == ProvisionStatus.DESTROYED) {
                         handleDestroyed(provision, null);
@@ -288,6 +314,39 @@ public class ProvisioningService {
                 log.warn("상태 동기화 실패 (무시): crName={}, error={}", provision.getCrName(), e.getMessage());
             }
         }
+
+        // Semaphore RUNNING 상태인 provision의 task 완료 여부 폴링
+        if (semaphoreClient.isConfigured()) {
+            syncSemaphoreStatus();
+        }
+    }
+
+    /**
+     * semaphore_status = RUNNING 인 provision에 대해 Semaphore API를 폴링하여 완료 여부를 반영한다.
+     * syncStatus()에서 호출된다.
+     */
+    private void syncSemaphoreStatus() {
+        List<Provision> running = provisionRepository.findBySemaphoreStatus(SemaphoreStatus.RUNNING);
+        for (Provision provision : running) {
+            if (provision.getSemaphoreTaskId() == null) continue;
+            try {
+                SemaphoreClient.TaskResult result = semaphoreClient.getTaskResult(provision.getSemaphoreTaskId());
+                SemaphoreStatus next = switch (result.status()) {
+                    case "success" -> SemaphoreStatus.SUCCESS;
+                    case "error", "failed" -> SemaphoreStatus.FAILED;
+                    default -> SemaphoreStatus.RUNNING; // waiting, running
+                };
+                if (next != SemaphoreStatus.RUNNING) {
+                    provision.updateSemaphoreStatus(next);
+                    provisionRepository.save(provision);
+                    log.info("[taskId={}] Semaphore 완료: crName={}, semaphoreTaskId={}, semaphoreStatus={}",
+                            provision.getProvisionTaskId(), provision.getCrName(), provision.getSemaphoreTaskId(), next);
+                }
+            } catch (Exception e) {
+                log.warn("[taskId={}] Semaphore 상태 폴링 실패 (무시): crName={}, semaphoreTaskId={}, error={}",
+                        provision.getProvisionTaskId(), provision.getCrName(), provision.getSemaphoreTaskId(), e.getMessage());
+            }
+        }
     }
 
     /**
@@ -296,7 +355,16 @@ public class ProvisioningService {
     @Transactional
     protected void onApplied(Provision provision) {
         String crName = provision.getCrName();
-        log.info("Terraform apply 완료: crName={}, moduleType={}", crName, provision.getModuleType());
+
+        // 이미 Semaphore 리소스가 생성된 경우 중복 트리거 방지
+        if (provision.getSemaphoreTaskId() != null) {
+            log.info("[taskId={}][onApplied] Semaphore 이미 실행됨, 스킵: crName={}, semaphoreTaskId={}",
+                    provision.getProvisionTaskId(), crName, provision.getSemaphoreTaskId());
+            return;
+        }
+
+        log.info("[taskId={}] Terraform apply 완료: crName={}, moduleType={}",
+                provision.getProvisionTaskId(), crName, provision.getModuleType());
 
         // 1. tofu-controller CR에서 Terraform outputs 조회
         Map<String, ProvisioningClient.OutputEntry> outputs;
@@ -307,7 +375,13 @@ public class ProvisioningService {
             return;
         }
 
-        // 2. outputs → DB 저장 (기존 outputs 교체)
+        // 2. outputs → DB 저장 (기존 outputs 교체, provision()에서 저장한 sensitive 키는 보존)
+        // delete 전에 먼저 읽어야 함
+        String savedPrivateKey = provisionOutputRepository
+                .findByCrNameAndOutputKey(crName, "vm_ssh_private_key")
+                .map(o -> o.getOutputValue())
+                .orElse(null);
+
         if (outputs.isEmpty()) {
             log.warn("[onApplied] Terraform outputs 없음 — Terraform 모듈에 output 블록이 정의되어 있는지 확인하세요: crName={}", crName);
         } else {
@@ -320,6 +394,10 @@ public class ProvisioningService {
                             e.getValue().type(),
                             e.getValue().sensitive()))
                     .collect(Collectors.toList());
+            // provision()에서 저장한 private key 복원
+            if (savedPrivateKey != null) {
+                records.add(ProvisionOutput.of(crName, "vm_ssh_private_key", savedPrivateKey, "string", true));
+            }
             provisionOutputRepository.saveAll(records);
             log.info("[onApplied] outputs {}개 저장: crName={}, keys={}", records.size(), crName, outputs.keySet());
         }
@@ -338,13 +416,23 @@ public class ProvisioningService {
             log.info("[onApplied] Semaphore 미설정 — post-provisioning 스킵: crName={}", crName);
             return;
         }
-        Map<String, String> outputsAsStrings = outputs.entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().value() != null ? e.getValue().value() : ""));
+        Map<String, String> outputsAsStrings = new HashMap<>(outputs.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().value() != null ? e.getValue().value() : "")));
+
+        // provision() 시 생성한 private key 추가 (terraform sensitive output 제한 우회)
+        if (savedPrivateKey != null) {
+            outputsAsStrings.put("vm_ssh_private_key", savedPrivateKey);
+        }
+
         try {
-            int taskId = semaphoreClient.triggerPostProvisionJob(crName, outputsAsStrings);
-            log.info("[onApplied] Semaphore Task 실행됨: crName={}, taskId={}", crName, taskId);
+            SemaphoreClient.PostProvisionResult result = semaphoreClient.triggerPostProvisionJob(crName, outputsAsStrings);
+            provision.assignSemaphoreIds(result.sshKeyId(), result.inventoryId(), result.templateId(), result.taskId(), result.environmentId());
+            provisionRepository.save(provision);
+            log.info("[taskId={}][onApplied] Semaphore Task 실행됨: crName={}, semaphoreTaskId={}, sshKeyId={}, inventoryId={}, templateId={}, environmentId={}",
+                    provision.getProvisionTaskId(), crName, result.taskId(), result.sshKeyId(), result.inventoryId(), result.templateId(), result.environmentId());
         } catch (Exception e) {
-            log.error("[onApplied] Semaphore 트리거 실패 (프로비저닝은 완료): crName={}, error={}", crName, e.getMessage(), e);
+            log.error("[taskId={}][onApplied] Semaphore 트리거 실패 (프로비저닝은 완료): crName={}, error={}",
+                    provision.getProvisionTaskId(), crName, e.getMessage(), e);
         }
     }
 
@@ -353,11 +441,34 @@ public class ProvisioningService {
     // -------------------------------------------------------------------------
 
     /**
-     * DESTROYED 상태 처리: 히스토리 저장 후 provisions + outputs 테이블에서 삭제.
+     * DESTROYED 상태 처리: Semaphore 리소스 정리 → 히스토리 저장 → DB에서 삭제.
      * @param detail 오류 메시지 등 부가 정보 (없으면 null)
      */
     @Transactional
     protected void handleDestroyed(Provision provision, String detail) {
+        // Semaphore 리소스 정리 (생성했던 template + inventory 삭제)
+        if (semaphoreClient.isConfigured()
+                && provision.getSemaphoreTemplateId() != null
+                && provision.getSemaphoreInventoryId() != null) {
+            try {
+                int sshKeyId = provision.getSemaphoreSshKeyId() != null ? provision.getSemaphoreSshKeyId() : -1;
+                int environmentId = provision.getSemaphoreEnvironmentId() != null ? provision.getSemaphoreEnvironmentId() : -1;
+                semaphoreClient.cleanupPostProvision(sshKeyId, provision.getSemaphoreTemplateId(), provision.getSemaphoreInventoryId(), environmentId);
+                log.info("[handleDestroyed] Semaphore 리소스 정리 완료: crName={}, sshKeyId={}, templateId={}, inventoryId={}",
+                        provision.getCrName(), sshKeyId, provision.getSemaphoreTemplateId(), provision.getSemaphoreInventoryId());
+            } catch (Exception e) {
+                log.warn("[handleDestroyed] Semaphore 리소스 정리 실패 (무시): crName={}, error={}",
+                        provision.getCrName(), e.getMessage());
+            }
+        }
+
+        // tfstate Secret 삭제
+        try {
+            provisioningClient.deleteTfStateSecret(provision.getCrName());
+        } catch (Exception e) {
+            log.warn("[handleDestroyed] tfstate Secret 삭제 실패 (무시): crName={}, error={}", provision.getCrName(), e.getMessage());
+        }
+
         ProvisionStatus prev = provision.getStatus();
         provisionHistoryRepository.save(ProvisionHistory.statusChanged(provision, prev, ProvisionStatus.DESTROYED, detail));
         provisionOutputRepository.deleteByCrName(provision.getCrName());
@@ -414,5 +525,21 @@ public class ProvisioningService {
 
     private String sanitizeCrName(String name) {
         return name.toLowerCase().replaceAll("[^a-z0-9-]", "-").replaceAll("-+", "-").replaceAll("^-|-$", "");
+    }
+
+    private record SshKeyPair(String publicKey, String privateKey) {}
+
+    private SshKeyPair generateSshKeyPair(String comment) throws Exception {
+        JSch jsch = new JSch();
+        KeyPair kpair = KeyPair.genKeyPair(jsch, KeyPair.RSA, 4096);
+
+        ByteArrayOutputStream pubOut = new ByteArrayOutputStream();
+        kpair.writePublicKey(pubOut, "opencsp-" + comment);
+
+        ByteArrayOutputStream privOut = new ByteArrayOutputStream();
+        kpair.writePrivateKey(privOut);
+
+        kpair.dispose();
+        return new SshKeyPair(pubOut.toString().trim(), privOut.toString().trim());
     }
 }

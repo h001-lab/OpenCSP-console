@@ -9,7 +9,12 @@
     "title": "OpenCSP Console"
   },
   "Home": {
-    "sidebar": [{ "label": "Home", "path": "/" }],
+    "sidebar": [
+      {
+        "label": "Home",
+        "path": "/"
+      }
+    ],
     "hero": {
       "title": "Welcome to OpenCSP Console",
       "description": "Your open-source cloud platform powered by Proxmox and cloud-native tools. Build and manage your own CSP infrastructure from one place."
@@ -19,7 +24,9 @@
       "viewAll": "View all →",
       "empty": "No news available."
     },
-    "quickAccess": { "title": "Quick Access" },
+    "quickAccess": {
+      "title": "Quick Access"
+    },
     "quickLinks": [
       {
         "label": "Instances",
@@ -30,14 +37,19 @@
     "gettingStarted": {
       "title": "Getting Started",
       "steps": [
-        "Connect your Proxmox node in Admin → Nodes",
         "Configure IAM provider in Admin → Integrations",
+        "Connect your nodes in Admin → Integrations",
         "Launch your first instance via Compute → Instances"
       ]
     }
   },
   "News": {
-    "sidebar": [{ "label": "News", "path": "/news" }],
+    "sidebar": [
+      {
+        "label": "News",
+        "path": "/news"
+      }
+    ],
     "title": "News",
     "loading": "Loading…",
     "empty": "No news found.",
@@ -47,24 +59,75 @@
   "Admin": {
     "title": "Admin",
     "sidebar": [
-      { "label": "Admin Page", "path": "/admin" },
-      { "label": "User Management", "path": "/admin/users" },
-      { "label": "Node Management", "path": "/admin/nodes" },
-      { "label": "Integrations", "path": "/admin/integrations" },
-      { "label": "Infrastructure", "path": "/admin/infrastructure" },
-      { "label": "System Settings", "path": "/admin/settings" },
-      { "label": "Monitoring", "path": "/admin/monitoring" }
+      {
+        "label": "Admin Page",
+        "path": "/admin"
+      },
+      {
+        "label": "User Management",
+        "path": "/admin/users"
+      },
+      {
+        "label": "Integrations",
+        "path": "/admin/integrations"
+      },
+      {
+        "label": "Infrastructure",
+        "path": "/admin/infrastructure"
+      },
+      {
+        "label": "System Settings",
+        "path": "/admin/settings"
+      },
+      {
+        "label": "Monitoring",
+        "path": "/admin/monitoring"
+      }
     ],
     "info": [
-      { "label": "User Management", "description": "Manage users, permissions, and roles." },
-      { "label": "Integrations", "description": "Configure IAM, Kubernetes, AI, and other integrations." },
-      { "label": "Infrastructure", "description": "View and manage provisioned Terraform resources." },
-      { "label": "System Settings", "description": "Manage overall system configurations." },
-      { "label": "Monitoring", "description": "Monitor system status and performance." }
+      {
+        "label": "User Management",
+        "description": "Manage users, permissions, and roles."
+      },
+      {
+        "label": "Integrations",
+        "description": "Configure IAM, Kubernetes, AI, and other integrations."
+      },
+      {
+        "label": "Infrastructure",
+        "description": "View and manage provisioned Terraform resources."
+      },
+      {
+        "label": "System Settings",
+        "description": "Manage overall system configurations."
+      },
+      {
+        "label": "Monitoring",
+        "description": "Monitor system status and performance."
+      }
     ],
     "monitoring": {
       "title": "Monitoring",
-      "sub_title_1": "Logs & Reports"
+      "sub_title_1": "Logs & Reports",
+      "nodeMetrics": {
+        "title": "Node Metrics",
+        "description": "Real-time resource usage collected from Proxmox nodes via API.",
+        "refresh": "Refresh",
+        "loading": "Loading...",
+        "empty": "No nodes registered.",
+        "noMetrics": "No metrics yet",
+        "noCredentials": "No API credentials",
+        "lastUpdated": "Updated",
+        "cpu": "CPU",
+        "mem": "Memory",
+        "disk": "Disk",
+        "status": {
+          "ACTIVE": "Active",
+          "ISOLATED": "Isolated",
+          "MAINTENANCE": "Maintenance",
+          "OFFLINE": "Offline"
+        }
+      }
     },
     "users": {
       "title": "User Management",
@@ -92,56 +155,16 @@
         "syncedAt": "Synced At"
       }
     },
-    "nodes": {
-      "title": "Node Management",
-      "description": "Register and manage Proxmox hypervisor nodes.",
-      "refresh": "Refresh",
-      "addNode": "+ Add Node",
-      "loading": "Loading...",
-      "empty": "No nodes registered.",
-      "addFirst": "Add your first node",
-      "delete": "Delete",
-      "statusChangeFailed": "Failed to change status",
-      "columns": {
-        "hostname": "Hostname",
-        "ip": "IP",
-        "type": "Type",
-        "status": "Status",
-        "description": "Description",
-        "createdAt": "Created"
-      },
-      "form": {
-        "title": "Add Node",
-        "submitting": "Saving...",
-        "submit": "Save",
-        "hostname": { "label": "Hostname", "placeholder": "e.g. pve-01" },
-        "ip": { "label": "IP Address", "placeholder": "e.g. 192.168.1.10" },
-        "type": "Node Type",
-        "description": { "label": "Description", "placeholder": "Node description (optional)" },
-        "registerFailed": "Node registration failed"
-      },
-      "confirm": {
-        "statusChange": {
-          "title": "Change Node Status",
-          "message": "Change \"{hostname}\" node to {status} status?",
-          "confirm": "Change",
-          "cancel": "Cancel"
-        },
-        "delete": {
-          "title": "Delete Node",
-          "message": "Delete \"{hostname}\" node?",
-          "deleting": "Deleting...",
-          "confirm": "Delete",
-          "cancel": "Cancel"
-        }
-      }
-    },
     "integrations": {
       "title": "Integration Settings",
       "description": "DB values take priority over env vars. Some changes require app restart.",
       "loading": "Loading settings...",
       "saveFailed": "Save failed",
-      "columns": { "key": "Key", "value": "Value", "source": "Source" },
+      "columns": {
+        "key": "Key",
+        "value": "Value",
+        "source": "Source"
+      },
       "actions": {
         "edit": "Edit",
         "save": "Save",
@@ -151,9 +174,15 @@
       },
       "sensitivePlaceholder": "Enter new value (leave empty to skip)",
       "deleteConfirm": "Deleting \"{key}\" will revert to env var default. Continue?",
+      "tabs": {
+        "nodes": "Nodes",
+        "core": "Core",
+        "console": "Console"
+      },
       "descriptions": {
         "IAM": "Authentication/Authorization provider (Zitadel, etc.)",
-        "K8S": "k3s/k8s cluster, FluxCD + tofu-controller settings",
+        "PAM": "Privileged Access Management (Teleport, etc.)",
+        "K8S": "Core(kubernetes) settings",
         "AI": "OpenAI-compatible models (incl. Gemini), Vertex AI settings",
         "SEMAPHORE": "Ansible Semaphore post-provisioning automation",
         "PROVISION": "Provisioning behavior settings (history retention, etc.)",
@@ -171,11 +200,200 @@
         "savedOk": "Saved successfully",
         "unchangedHint": "Unchanged (leave blank to keep current value)",
         "loginRequired": "Provider saved. Please log in to continue."
+      },
+      "pam": {
+        "providerLabel": "PAM Provider",
+        "unsaved": "Unsaved",
+        "mfaLabel": "MFA Token (optional)",
+        "mfaPlaceholder": "6-digit OTP",
+        "testBtn": "Test Connection",
+        "testing": "Testing...",
+        "testPassed": "Connection successful",
+        "testFailed": "Connection failed",
+        "saveBtn": "Save",
+        "saving": "Saving...",
+        "savedOk": "Saved successfully",
+        "unchangedHint": "Unchanged (leave blank to keep current value)"
+      },
+      "k8s": {
+        "title": "Kubernetes / k3s",
+        "description": "API server URL and service account token for cluster access.",
+        "apiServerLabel": "API Server URL",
+        "apiServerPlaceholder": "https://192.168.1.10:6443",
+        "tokenLabel": "Bearer Token",
+        "tokenPlaceholder": "Enter token (leave blank to keep existing)",
+        "testBtn": "Test Connection",
+        "testing": "Testing...",
+        "testPassed": "Connection successful",
+        "testFailed": "Connection failed",
+        "saveBtn": "Save",
+        "saving": "Saving...",
+        "savedOk": "Saved",
+        "saveFailed": "Save failed"
+      },
+      "backend": {
+        "title": "Backend",
+        "description": "URL of the OpenCSP backend API server.",
+        "urlLabel": "Backend URL",
+        "urlPlaceholder": "http://localhost:8080",
+        "envHint": "Currently using value from BACKEND_URL environment variable.",
+        "testBtn": "Test Connection",
+        "testing": "Testing...",
+        "testPassed": "Connected",
+        "testFailed": "Connection failed",
+        "saveBtn": "Save",
+        "saving": "Saving...",
+        "savedOk": "Saved — takes effect immediately",
+        "saveFailed": "Save failed"
+      },
+      "semaphore": {
+        "unsaved": "Unsaved",
+        "testBtn": "Test Connection",
+        "testing": "Testing...",
+        "testPassed": "Test passed",
+        "testFailed": "Test failed",
+        "saveBtn": "Save",
+        "saving": "Saving...",
+        "savedOk": "Saved successfully",
+        "unchangedHint": "Unchanged (leave blank to keep current value)",
+        "loadProjectsBtn": "Load Projects",
+        "loadingProjects": "Loading...",
+        "projectLabel": "Project",
+        "projectPlaceholder": "Select a project",
+        "repoSection": "Git Repository",
+        "repoName": "Repository Name",
+        "repoUrl": "Git URL",
+        "repoBranch": "Branch",
+        "repoToken": "Access Token",
+        "repoTokenHint": "Leave blank if using a public repo or SSH key",
+        "playbookSection": "Playbook",
+        "playbookDesc": "Playbook file path to run during post-provisioning",
+        "envSection": "Variable Group (Environment)",
+        "envPlaceholder": "Select a variable group",
+        "loadEnvsBtn": "Load Environments",
+        "varGroupSection": "Variable Group",
+        "varGroupName": "Group Name",
+        "createBtn": "Create",
+        "creating": "Creating...",
+        "createOk": "Created successfully",
+        "createFailed": "Creation failed",
+        "varKeys": [
+          {
+            "key": "TELEPORT_PROXY_ADDR",
+            "label": "Teleport Proxy Address",
+            "placeholder": "e.g. teleport.example.com:443"
+          },
+          {
+            "key": "TELEPORT_JOIN_TOKEN",
+            "label": "Teleport Join Token",
+            "placeholder": "Join token"
+          }
+        ]
+      },
+      "nodes": {
+        "sectionTitle": "Nodes",
+        "description": "Register Proxmox nodes and configure API credentials for metrics collection.",
+        "refresh": "Refresh",
+        "addNode": "Add Node",
+        "loading": "Loading...",
+        "empty": "No nodes registered.",
+        "delete": "Delete",
+        "statusChangeFailed": "Failed to change status",
+        "credentialsTitle": "API Credentials",
+        "credentialsSaved": "Credentials saved",
+        "credentialsSaveFailed": "Failed to save credentials",
+        "testBtn": "Test",
+        "testing": "Testing...",
+        "testPassed": "Test passed",
+        "testFailed": "Test failed",
+        "editCredentials": "Settings",
+        "saveCredentials": "Save",
+        "savingCredentials": "Saving...",
+        "cancelCredentials": "Cancel",
+        "derivedApiUrlLabel": "API URL",
+        "columns": {
+          "hostname": "Hostname",
+          "ip": "IP / URL",
+          "type": "Type",
+          "status": "Status",
+          "api": "API",
+          "metrics": "Metrics",
+          "actions": ""
+        },
+        "apiStatus": {
+          "connected": "Connected",
+          "noCredentials": "No credentials"
+        },
+        "form": {
+          "title": "Add Node",
+          "submitting": "Saving...",
+          "submit": "Save",
+          "hostname": {
+            "label": "Hostname",
+            "placeholder": "e.g. pve-01"
+          },
+          "ip": {
+            "label": "IP Address / URL",
+            "placeholder": "e.g. 192.168.1.10 or https://pve.example.com:8006"
+          },
+          "type": "Node Type",
+          "description": {
+            "label": "Description",
+            "placeholder": "Node description (optional)"
+          },
+          "registerFailed": "Node registration failed"
+        },
+        "credentials": {
+          "proxmoxNode": {
+            "label": "Proxmox Node Name",
+            "placeholder": "e.g. pve (defaults to hostname)"
+          },
+          "apiToken": {
+            "label": "API Token",
+            "placeholder": "USER@realm!tokenid=secret"
+          }
+        },
+        "isolateBtn": "Isolate",
+        "restoreBtn": "Restore",
+        "autoDetect": "Auto-detect",
+        "detecting": "Detecting...",
+        "detected": {
+          "title": "Detected from cluster",
+          "noSeedNode": "No node with API credentials configured. Add credentials to at least one node first.",
+          "noNew": "All cluster nodes are already registered.",
+          "importBtn": "Register",
+          "importAll": "Register All",
+          "importing": "Registering...",
+          "importFailed": "Registration failed"
+        },
+        "confirm": {
+          "delete": {
+            "title": "Delete Node",
+            "message": "Delete \"{hostname}\" node?",
+            "deleting": "Deleting...",
+            "confirm": "Delete",
+            "cancel": "Cancel"
+          },
+          "isolate": {
+            "title": "Isolate Node",
+            "message": "Isolate \"{hostname}\"? The node will stop receiving traffic.",
+            "isolating": "Isolating...",
+            "confirm": "Isolate",
+            "cancel": "Cancel"
+          },
+          "restore": {
+            "title": "Restore Node",
+            "message": "Restore \"{hostname}\"? Traffic to the node will resume.",
+            "restoring": "Restoring...",
+            "confirm": "Restore",
+            "cancel": "Cancel"
+          }
+        }
       }
     },
     "infrastructure": {
       "title": "Infrastructure Overview",
-      "description": "Terraform CRs provisioned via FluxCD + tofu-controller.",
+      "description": "Terraform CRs provisioned via tofu-controller.",
       "loading": "Loading resources...",
       "syncBtn": "Sync Cluster",
       "syncing": "Syncing...",
@@ -213,11 +431,15 @@
       "title": "System Settings",
       "sub_title_1": "Announcements & Banner",
       "tabs": {
-        "tab_1": { "title": "News Management" },
-        "tab_2": { "title": "Banner" }
+        "tab_1": {
+          "title": "News Management"
+        },
+        "tab_2": {
+          "title": "Banner"
+        }
       },
       "news": {
-        "add": "+ Add News",
+        "add": "Add News",
         "loading": "Loading…",
         "empty": "No news registered.",
         "backToList": "← Back to list",
@@ -238,15 +460,26 @@
           "published": "Visible",
           "createdAt": "Created"
         },
-        "actions": { "edit": "Edit", "delete": "Delete" },
-        "status": { "visible": "Visible", "hidden": "Hidden" },
+        "actions": {
+          "edit": "Edit",
+          "delete": "Delete"
+        },
+        "status": {
+          "visible": "Visible",
+          "hidden": "Hidden"
+        },
         "deleteConfirm": {
           "title": "Delete News",
           "message": "Delete \"{title}\"?",
           "confirm": "Delete",
           "cancel": "Cancel"
         },
-        "categories": ["공지", "업데이트", "점검", "보안"]
+        "categories": [
+          "공지",
+          "업데이트",
+          "점검",
+          "보안"
+        ]
       },
       "banner": {
         "preview": "Preview",
@@ -261,15 +494,23 @@
       }
     }
   },
-"Dashboard": {
+  "Dashboard": {
     "title": "Dashboard",
-    "sidebar": [{ "label": "Dashboard Home", "path": "/dashboard" }],
+    "sidebar": [
+      {
+        "label": "Dashboard Home",
+        "path": "/dashboard"
+      }
+    ],
     "placeholder": "Add dashboard content here."
   },
   "Billing": {
     "title": "Billing",
     "sidebar": [
-      { "label": "Billing", "path": "/billing" }
+      {
+        "label": "Billing",
+        "path": "/billing"
+      }
     ],
     "description": "View your resource usage and billing history.",
     "summary": {
@@ -277,19 +518,35 @@
       "cpu": "CPU",
       "storage": "Storage",
       "network": "Network",
-      "unit": { "cpu": "core·h", "storage": "GB", "network": "GB" }
+      "unit": {
+        "cpu": "core·h",
+        "storage": "GB",
+        "network": "GB"
+      }
     },
     "history": {
       "title": "Billing History",
       "empty": "No billing records found.",
-      "columns": { "period": "Period", "amount": "Amount", "status": "Status", "issued": "Issued" }
+      "columns": {
+        "period": "Period",
+        "amount": "Amount",
+        "status": "Status",
+        "issued": "Issued"
+      }
     },
-    "status": { "paid": "Paid", "pending": "Pending", "overdue": "Overdue" }
+    "status": {
+      "paid": "Paid",
+      "pending": "Pending",
+      "overdue": "Overdue"
+    }
   },
   "UserSettings": {
     "title": "Settings",
     "sidebar": [
-      { "label": "Settings", "path": "/settings" }
+      {
+        "label": "Settings",
+        "path": "/settings"
+      }
     ],
     "description": "Manage your account preferences.",
     "profile": {
@@ -303,24 +560,45 @@
       "title": "Preferences",
       "language": "Language",
       "languageOptions": [
-        { "value": "en", "label": "English" },
-        { "value": "ko", "label": "한국어" }
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "ko",
+          "label": "한국어"
+        }
       ]
     }
   },
   "Instances": {
     "title": "Instances",
     "sidebar": [
-      { "label": "Instances", "path": "/instances" },
-      { "label": "Instance List", "path": "/instances?view=list" }
+      {
+        "label": "Instances",
+        "path": "/instances"
+      },
+      {
+        "label": "Instance List",
+        "path": "/instances?view=list"
+      }
     ],
     "intro": {
       "title": "Cloud Instances",
-      "description": "Create and manage Proxmox-based virtual machines.\nProvision infrastructure as code via FluxCD + OpenTofu,\nand monitor creation status in real time.",
+      "description": "Create and manage Proxmox-based virtual machines.\nProvision infrastructure as code via tofu-controller,\nand monitor creation status in real time.",
       "features": [
-        { "title": "Fast Deploy", "desc": "GitOps-based automated provisioning" },
-        { "title": "Safe Management", "desc": "Isolated instance environment per user" },
-        { "title": "Real-time Monitoring", "desc": "Track CR status in real time" }
+        {
+          "title": "Fast Deploy",
+          "desc": "GitOps-based automated provisioning"
+        },
+        {
+          "title": "Safe Management",
+          "desc": "Isolated instance environment per user"
+        },
+        {
+          "title": "Real-time Monitoring",
+          "desc": "Track CR status in real time"
+        }
       ],
       "viewList": "View Instance List",
       "loginRequired": "Login required to create instances."
@@ -360,7 +638,7 @@
       "title": "Instance List",
       "description": "List of provisioned instances.",
       "refresh": "Refresh",
-      "add": "+ Add Instance",
+      "add": "Add Instance",
       "deleteSelected": "Delete Selected ({count})",
       "tabs": {
         "active": "Active Instances",
@@ -401,7 +679,9 @@
         "console": "Console",
         "edit": "Edit",
         "stop": "Stop",
-        "delete": "Delete"
+        "delete": "Delete",
+        "semaphore": "Semaphore Log",
+        "semaphoreNoOutput": "No output available"
       },
       "notReady": "This feature is not ready yet.",
       "deleteFailed": "Delete failed",
@@ -415,6 +695,174 @@
         "confirm": "Delete",
         "cancel": "Cancel"
       }
+    }
+  },
+  "Network": {
+    "title": "Network",
+    "sidebar": [
+      {
+        "label": "Network",
+        "path": "/network"
+      }
+    ],
+    "intro": {
+      "title": "Virtual Networks",
+      "description": "Define and manage your virtual networks, subnets, and routing.\nIsolate workloads and control traffic between your cloud resources.",
+      "features": [
+        {
+          "title": "Network Isolation",
+          "desc": "Separate environments with private VNets"
+        },
+        {
+          "title": "Custom Routing",
+          "desc": "Define routing rules and gateways"
+        },
+        {
+          "title": "Subnet Management",
+          "desc": "Organize resources into subnets"
+        }
+      ],
+      "loginRequired": "Login required to manage networks."
+    }
+  },
+  "Firewall": {
+    "title": "Firewall",
+    "sidebar": [
+      {
+        "label": "Firewall",
+        "path": "/firewall"
+      }
+    ],
+    "intro": {
+      "title": "Firewall Rules",
+      "description": "Control inbound and outbound traffic to your cloud resources.\nDefine security groups and network access policies.",
+      "features": [
+        {
+          "title": "Inbound Rules",
+          "desc": "Allow or deny incoming traffic"
+        },
+        {
+          "title": "Outbound Rules",
+          "desc": "Control egress traffic from instances"
+        },
+        {
+          "title": "Security Groups",
+          "desc": "Group rules for reusable policies"
+        }
+      ],
+      "loginRequired": "Login required to manage firewall rules."
+    }
+  },
+  "Volumes": {
+    "title": "Volumes",
+    "sidebar": [
+      {
+        "label": "Volumes",
+        "path": "/volumes"
+      }
+    ],
+    "intro": {
+      "title": "Block Storage Volumes",
+      "description": "Provision and manage persistent block storage for your instances.\nAttach, detach, and resize volumes on demand.",
+      "features": [
+        {
+          "title": "Persistent Storage",
+          "desc": "Data persists beyond instance lifecycle"
+        },
+        {
+          "title": "Hot Attach",
+          "desc": "Attach volumes to running instances"
+        },
+        {
+          "title": "Snapshot Support",
+          "desc": "Create point-in-time snapshots"
+        }
+      ],
+      "loginRequired": "Login required to manage volumes."
+    }
+  },
+  "Backups": {
+    "title": "Backups",
+    "sidebar": [
+      {
+        "label": "Backups",
+        "path": "/backups"
+      }
+    ],
+    "intro": {
+      "title": "Automated Backups",
+      "description": "Schedule and manage backups of your instances and volumes.\nRestore to any previous state with a single click.",
+      "features": [
+        {
+          "title": "Scheduled Backups",
+          "desc": "Set automatic backup intervals"
+        },
+        {
+          "title": "Incremental",
+          "desc": "Efficient storage with incremental backups"
+        },
+        {
+          "title": "One-click Restore",
+          "desc": "Restore instances from any backup"
+        }
+      ],
+      "loginRequired": "Login required to manage backups."
+    }
+  },
+  "Monitoring": {
+    "title": "Monitoring",
+    "sidebar": [
+      {
+        "label": "Monitoring",
+        "path": "/monitoring"
+      }
+    ],
+    "intro": {
+      "title": "Resource Monitoring",
+      "description": "Monitor CPU, memory, disk, and network metrics across your instances.\nSet up alerts to stay on top of performance and availability.",
+      "features": [
+        {
+          "title": "Real-time Metrics",
+          "desc": "Live resource utilization dashboards"
+        },
+        {
+          "title": "Alerts",
+          "desc": "Get notified when thresholds are exceeded"
+        },
+        {
+          "title": "History",
+          "desc": "Analyze trends with historical data"
+        }
+      ],
+      "loginRequired": "Login required to view monitoring data."
+    }
+  },
+  "IAM": {
+    "title": "IAM",
+    "sidebar": [
+      {
+        "label": "IAM",
+        "path": "/iam"
+      }
+    ],
+    "intro": {
+      "title": "Identity & Access Management",
+      "description": "Manage users, groups, and access permissions for your organization.\nControl who can access which resources and what actions they can perform.",
+      "features": [
+        {
+          "title": "User Management",
+          "desc": "Add and manage organization members"
+        },
+        {
+          "title": "Role-based Access",
+          "desc": "Assign roles to control permissions"
+        },
+        {
+          "title": "Audit Logs",
+          "desc": "Track access and changes"
+        }
+      ],
+      "loginRequired": "Login required to manage IAM."
     }
   }
 }
