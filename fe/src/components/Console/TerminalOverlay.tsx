@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useAuthStore } from "@/stores/authStore";
 import { Terminal } from "xterm";
 
@@ -78,7 +78,7 @@ export default function TerminalOverlay({ crName, login = "root", onClose }: Pro
   // const initialized = useRef(false);
   const t = useMsg("Console") as unknown as ConsoleMessages | undefined;
   const tRef = useRef(t);
-  tRef.current = t;
+  useLayoutEffect(() => { tRef.current = t; });
 
   useEffect(() => {
     // if (initialized.current) return;
@@ -262,7 +262,7 @@ export default function TerminalOverlay({ crName, login = "root", onClose }: Pro
       wsRef.current?.close();
       termInst.current?.dispose();
     };
-  }, [crName, login]);
+  }, [crName, login, userId]);
 
   const statusColor: Record<Status, string> = {
     connecting:   "text-yellow-400",

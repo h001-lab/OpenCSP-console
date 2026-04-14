@@ -528,7 +528,6 @@ function InstanceDetail({
 
   if (!t) return null;
 
-  const isActive   = !["DESTROYING", "DESTROYED"].includes(provision.status);
   const isFailed   = provision.status === "FAILED";
   const isApplied  = provision.status === "APPLIED";
   const errorMessage = extractErrorMessage(provision);
