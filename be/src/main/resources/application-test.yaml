@@ -42,6 +42,9 @@ zitadel:
   api-token: test-api-token
 
 logging:
+  structured:
+    format:
+      console: ""  # 테스트에서는 텍스트 포맷으로 가독성 유지
   level:
     io.hlab.opencsp: DEBUG
     org.springframework.web: DEBUG

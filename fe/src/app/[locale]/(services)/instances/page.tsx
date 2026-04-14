@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import Layout from "@/components/Layout/Layout";
-import { Button, Spinner, Tag, ConfirmModal } from "@h001/ui";
+import { Button, Spinner, Tag, ConfirmModal, Tabs, TabList, Tab, TabPanel } from "@h001/ui";
 import { useMsg } from "@/providers/MessagesProvider";
 import { useAuthStore } from "@/stores/authStore";
 
@@ -89,8 +89,12 @@ interface InstancesMessages {
   };
   detail: {
     backToList: string;
-    fields: { vmId: string; crName: string; moduleType: string; node: string; userId: string; status: string; createdAt: string; updatedAt: string };
-    actions: { console: string; edit: string; stop: string; delete: string; semaphore?: string; semaphoreNoOutput?: string };
+    tabs: { overview: string; ansible: string; ssh: string };
+    fields: { vmId: string; crName: string; moduleType: string; node: string; userId: string; status: string; createdAt: string; updatedAt: string; semaphoreStatus: string; semaphoreTaskId: string };
+    actions: { console: string; edit: string; stop: string; delete: string };
+    console: { title: string; selectAccount: string; connect: string; cancel: string; installNote: string; connectNote: string; webConsoleNote: string };
+    ansible: { taskId: string; refresh: string; noOutput: string; notTriggered: string };
+    ssh: { user: string; readyNote: string; installNote: string; connectNote: string; showScript: string; hideScript: string; fullScript: string; copyScript: string; copied: string; scriptFetchError: string };
     notReady: string;
     deleteFailed: string;
     terraformError: string;
@@ -445,6 +449,40 @@ function IntroView({ isAuthenticated }: { isAuthenticated: boolean }) {
 
 // ─── 디테일 뷰 ────────────────────────────────────────────────────────────
 
+
+function CmdBlock({ cmd, onCopy, copied }: { cmd: string; onCopy: () => void; copied: boolean }) {
+  return (
+    <div className="flex items-center gap-2 bg-gray-950 rounded px-3 py-2.5">
+      <code className="flex-1 text-xs text-green-400 font-mono truncate">{cmd}</code>
+      <button
+        onClick={onCopy}
+        className="shrink-0 text-xs text-gray-400 hover:text-white px-2 py-1 rounded border border-gray-700 hover:border-gray-500 transition-colors"
+      >
+        {copied ? "✓" : "Copy"}
+      </button>
+    </div>
+  );
+}
+
+function ScriptBlock({ content, onCopy, copied }: { content: string | null; onCopy: () => void; copied: boolean }) {
+  return (
+    <div className="bg-gray-950 rounded overflow-hidden">
+      <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-800">
+        <span className="text-xs text-gray-500 font-mono">bash</span>
+        <button
+          onClick={onCopy}
+          className="text-xs text-gray-400 hover:text-white px-2 py-0.5 rounded border border-gray-700 hover:border-gray-500 transition-colors"
+        >
+          {copied ? "✓" : "Copy"}
+        </button>
+      </div>
+      <pre className="px-3 py-3 text-xs text-green-400 font-mono overflow-x-auto whitespace-pre-wrap max-h-64 overflow-y-auto">
+        {content ?? "Loading…"}
+      </pre>
+    </div>
+  );
+}
+
 function InstanceDetail({
   provision,
   onBack,
@@ -455,23 +493,31 @@ function InstanceDetail({
   onDeleted: () => void;
 }) {
   const t = (useMsg("Instances") as unknown as InstancesMessages | undefined)?.detail;
+
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting]           = useState(false);
-  const [consoleOpen, setConsoleOpen]     = useState(false);
 
-  // Semaphore task 결과
+  // 콘솔 셋업 모달
+  const [consoleSetupOpen, setConsoleSetupOpen] = useState(false);
+  const [consoleLogin, setConsoleLogin]         = useState<"ubuntu" | "root">("ubuntu");
+  const [consoleOpen, setConsoleOpen]           = useState(false);
+  const [consoleCopied, setConsoleCopied]       = useState(false);
+
+  // Ansible/Semaphore
   const [semaphoreResult, setSemaphoreResult] = useState<{
     status: string; success: boolean; output: string; taskId: number | null;
   } | null>(null);
   const [semaphoreLoading, setSemaphoreLoading] = useState(false);
-  const [semaphoreOpen, setSemaphoreOpen]       = useState(false);
 
-  // SSH 접근 스크립트
+  // SSH
   const [teleportProxyUrl, setTeleportProxyUrl] = useState("");
   const [sshUser, setSshUser]                   = useState("ubuntu");
   const [scriptOpen, setScriptOpen]             = useState(false);
   const [curlCopied, setCurlCopied]             = useState(false);
+  const [sshCopied, setSshCopied]               = useState(false);
   const [scriptCopied, setScriptCopied]         = useState(false);
+  const [scriptContent, setScriptContent]       = useState<string | null>(null);
+  const [scriptFetchError, setScriptFetchError] = useState(false);
 
   useEffect(() => {
     fetch("/api/provisions/access-config")
@@ -480,22 +526,25 @@ function InstanceDetail({
       .catch(() => {});
   }, []);
 
-  async function handleSemaphoreSync() {
+  if (!t) return null;
+
+  const isActive   = !["DESTROYING", "DESTROYED"].includes(provision.status);
+  const isFailed   = provision.status === "FAILED";
+  const isApplied  = provision.status === "APPLIED";
+  const errorMessage = extractErrorMessage(provision);
+
+  async function handleSemaphoreRefresh() {
     setSemaphoreLoading(true);
     try {
       const res = await fetch(`/api/admin/provisions/${provision.crName}/semaphore`);
       const json = await res.json();
       setSemaphoreResult(json.data ?? json);
-      setSemaphoreOpen(true);
     } catch {
       setSemaphoreResult({ status: "error", success: false, output: "Request failed", taskId: null });
-      setSemaphoreOpen(true);
     } finally {
       setSemaphoreLoading(false);
     }
   }
-
-  if (!t) return null;
 
   async function handleDelete() {
     setDeleting(true);
@@ -510,28 +559,89 @@ function InstanceDetail({
     }
   }
 
-  const isActive     = !["DESTROYING", "DESTROYED"].includes(provision.status);
-  const isFailed     = provision.status === "FAILED";
-  const errorMessage = extractErrorMessage(provision);
+  // SSH / Console 커맨드 계산
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const consoleInstallUrl = isApplied && provision.vmHostname
+    ? `${origin}/api/install?proxy=${encodeURIComponent(teleportProxyUrl)}&host=${encodeURIComponent(provision.vmHostname)}&user=${encodeURIComponent(consoleLogin)}`
+    : "";
+  const consoleCurlCmd = consoleInstallUrl ? `curl -sL "${consoleInstallUrl}" | bash` : "";
+  const sshInstallUrl = isApplied && provision.vmHostname
+    ? `${origin}/api/install?proxy=${encodeURIComponent(teleportProxyUrl)}&host=${encodeURIComponent(provision.vmHostname)}&user=${encodeURIComponent(sshUser)}`
+    : "";
+  const sshCurlCmd = sshInstallUrl ? `curl -sL "${sshInstallUrl}" | bash` : "";
+  const sshCmd     = provision.vmHostname ? `ssh ${sshUser}@${provision.vmHostname}` : "";
 
-  const fields: { label: string; value: React.ReactNode }[] = [
-    { label: t.fields.vmId,        value: provision.vmId ?? "-" },
-    { label: t.fields.crName,      value: <span className="font-mono text-xs">{provision.crName}</span> },
-    { label: t.fields.moduleType,  value: provision.moduleType },
-    { label: t.fields.node,        value: provision.proxmoxNode ?? "-" },
-    { label: t.fields.userId,      value: <span className="font-mono text-xs">{provision.userId}</span> },
-    { label: t.fields.status,      value: <Tag type={statusTagType(provision.status)}>{provision.status}</Tag> },
-    { label: t.fields.createdAt,   value: new Date(provision.createdAt).toLocaleString() },
-    { label: t.fields.updatedAt,   value: new Date(provision.updatedAt).toLocaleString() },
+  const semaphoreStatusClass = (s: string) =>
+    s === "success"        ? "bg-green-50 text-green-700 border-green-200"
+    : s === "error" || s === "failed" ? "bg-red-50 text-red-700 border-red-200"
+    : s === "not_triggered" ? "bg-gray-50 text-gray-500 border-gray-200"
+    : "bg-yellow-50 text-yellow-700 border-yellow-200";
+
+  const overviewFields: { label: string; value: React.ReactNode }[] = [
+    { label: t.fields.vmId,       value: provision.vmId ?? "-" },
+    { label: t.fields.crName,     value: <span className="font-mono text-xs">{provision.crName}</span> },
+    { label: t.fields.moduleType, value: provision.moduleType },
+    { label: t.fields.node,       value: provision.proxmoxNode ?? "-" },
+    { label: t.fields.userId,     value: <span className="font-mono text-xs">{provision.userId}</span> },
+    { label: t.fields.status,     value: <Tag type={statusTagType(provision.status)}>{provision.status}</Tag> },
+    { label: t.fields.semaphoreStatus, value: provision.semaphoreStatus
+        ? <span className={`text-xs px-2 py-0.5 rounded border font-mono ${semaphoreStatusClass(provision.semaphoreStatus.toLowerCase())}`}>{provision.semaphoreStatus}</span>
+        : <span className="text-gray-300 text-xs">—</span> },
+    { label: t.fields.semaphoreTaskId, value: provision.semaphoreTaskId != null
+        ? <span className="font-mono text-xs text-gray-600">#{provision.semaphoreTaskId}</span>
+        : <span className="text-gray-300 text-xs">—</span> },
+    { label: t.fields.createdAt,  value: new Date(provision.createdAt).toLocaleString() },
+    { label: t.fields.updatedAt,  value: new Date(provision.updatedAt).toLocaleString() },
   ];
 
   return (
     <div>
-      <button onClick={onBack}
-        className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 mb-6 transition-colors">
-        {t.backToList}
-      </button>
+      {/* 상단 헤더: 뒤로가기(좌) + 액션 버튼(우) */}
+      <div className="flex items-center justify-between mb-4">
+        <button onClick={onBack}
+          className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 transition-colors">
+          {t.backToList}
+        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setConsoleSetupOpen(true)}
+            disabled={!isApplied}
+            className="px-3 py-1.5 text-xs rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            {t.actions.console}
+          </button>
+          <button
+            onClick={() => alert(t!.notReady)}
+            disabled={!isApplied}
+            className="px-3 py-1.5 text-xs rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            {t.actions.edit}
+          </button>
+          <button
+            onClick={() => alert(t!.notReady)}
+            disabled={!isApplied}
+            className="px-3 py-1.5 text-xs rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            {t.actions.stop}
+          </button>
+          <button
+            onClick={() => setConfirmDelete(true)}
+            disabled={deleting}
+            className="px-3 py-1.5 text-xs rounded border border-red-200 bg-white text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            {t.actions.delete}
+          </button>
+        </div>
+      </div>
 
+      {/* 인스턴스 이름 / 상태 */}
+      <div className="flex items-center gap-3 mb-3 px-1">
+        <h3 className="font-semibold text-gray-800 font-mono text-sm">{provision.crName}</h3>
+        <span className="text-xs text-gray-400">{provision.moduleType}</span>
+        <Tag type={statusTagType(provision.status)}>{provision.status}</Tag>
+      </div>
+
+      {/* Terraform 에러 배너 */}
       {isFailed && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
           <div className="flex items-center gap-2 mb-1">
@@ -550,154 +660,245 @@ function InstanceDetail({
         </div>
       )}
 
-      <div className="bg-white rounded-lg border overflow-hidden mb-4">
-        <div className="px-5 py-4 border-b bg-gray-50 flex items-center justify-between">
-          <div>
-            <h3 className="font-semibold text-gray-800 font-mono text-sm">{provision.crName}</h3>
-            <p className="text-xs text-gray-500 mt-0.5">{provision.moduleType}</p>
+      {/* 탭 (카드 밖) */}
+      <Tabs defaultTab="overview">
+        <TabList>
+          <Tab id="overview">{t.tabs.overview}</Tab>
+          <Tab id="ansible">{t.tabs.ansible}</Tab>
+          <Tab id="ssh">{t.tabs.ssh}</Tab>
+        </TabList>
+
+        {/* Overview 패널 */}
+        <TabPanel id="overview">
+          <div className="bg-white rounded-lg border overflow-hidden">
+            <dl className="divide-y">
+              {overviewFields.map(({ label, value }) => (
+                <div key={label} className="px-5 py-3 flex items-center gap-4">
+                  <dt className="text-xs text-gray-500 w-36 shrink-0">{label}</dt>
+                  <dd className="text-sm text-gray-800">{value}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
-          <Tag type={statusTagType(provision.status)}>{provision.status}</Tag>
-        </div>
-        <dl className="divide-y">
-          {fields.map(({ label, value }) => (
-            <div key={label} className="px-5 py-3 flex items-center gap-4">
-              <dt className="text-xs text-gray-500 w-32 shrink-0">{label}</dt>
-              <dd className="text-sm text-gray-800">{value}</dd>
-            </div>
-          ))}
-        </dl>
-      </div>
+        </TabPanel>
 
-      <div className="flex items-center gap-2">
-        <Button variant="default" size="sm" disabled={provision.status !== "APPLIED"} onClick={() => setConsoleOpen(true)}>
-          {t.actions.console}
-        </Button>
-        <Button variant="outline" size="sm" disabled={!isActive} onClick={() => alert(t.notReady)}>
-          {t.actions.edit}
-        </Button>
-        <Button variant="outline" size="sm" disabled={!isActive} onClick={() => alert(t.notReady)}>
-          {t.actions.stop}
-        </Button>
-        <Button variant="outline" size="sm" onClick={handleSemaphoreSync} disabled={semaphoreLoading}>
-          {semaphoreLoading ? "..." : t.actions.semaphore ?? "Semaphore Log"}
-        </Button>
-        <Button variant="destructive" size="sm" disabled={!isActive} onClick={() => setConfirmDelete(true)}>
-          {t.actions.delete}
-        </Button>
-      </div>
-
-      {semaphoreOpen && semaphoreResult && (
-        <div className="mt-4 bg-white rounded-lg border overflow-hidden">
-          <div className="px-4 py-3 border-b bg-gray-50 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-gray-700">Semaphore Task</span>
-              {semaphoreResult.taskId != null && (
-                <span className="text-xs font-mono text-gray-400">#{semaphoreResult.taskId}</span>
-              )}
-              <span className={`text-xs px-2 py-0.5 rounded border font-mono ${
-                semaphoreResult.status === "success"
-                  ? "bg-green-50 text-green-700 border-green-200"
-                  : semaphoreResult.status === "error" || semaphoreResult.status === "failed"
-                  ? "bg-red-50 text-red-700 border-red-200"
-                  : semaphoreResult.status === "not_triggered"
-                  ? "bg-gray-50 text-gray-500 border-gray-200"
-                  : "bg-yellow-50 text-yellow-700 border-yellow-200"
-              }`}>
-                {semaphoreResult.status}
-              </span>
+        {/* Ansible 패널 */}
+        <TabPanel id="ansible">
+          <div className="bg-white rounded-lg border overflow-hidden p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-gray-700">Ansible / Semaphore</span>
+                {semaphoreResult?.taskId != null && (
+                  <span className="text-xs font-mono text-gray-400">{t.ansible.taskId} #{semaphoreResult.taskId}</span>
+                )}
+                {semaphoreResult && (
+                  <span className={`text-xs px-2 py-0.5 rounded border font-mono ${semaphoreStatusClass(semaphoreResult.status)}`}>
+                    {semaphoreResult.status}
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={handleSemaphoreRefresh}
+                disabled={semaphoreLoading}
+                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-800 border border-gray-200 rounded px-2.5 py-1.5 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+              >
+                <svg className={`w-3.5 h-3.5 ${semaphoreLoading ? "animate-spin" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                {t.ansible.refresh}
+              </button>
             </div>
-            <button onClick={() => setSemaphoreOpen(false)} className="text-gray-400 hover:text-gray-600 text-xs">✕</button>
+            {semaphoreResult ? (
+              semaphoreResult.output ? (
+                <pre className="text-xs font-mono bg-gray-950 text-green-400 rounded-lg p-4 overflow-x-auto whitespace-pre-wrap max-h-[28rem] overflow-y-auto">
+                  {semaphoreResult.output}
+                </pre>
+              ) : (
+                <p className="text-sm text-gray-400">{t.ansible.noOutput}</p>
+              )
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <svg className="w-10 h-10 text-gray-200 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                <p className="text-sm text-gray-400">{t.ansible.notTriggered}</p>
+                <button
+                  onClick={handleSemaphoreRefresh}
+                  disabled={semaphoreLoading}
+                  className="mt-3 text-xs text-blue-600 hover:underline disabled:opacity-50"
+                >
+                  {t.ansible.refresh}
+                </button>
+              </div>
+            )}
           </div>
-          {semaphoreResult.output ? (
-            <pre className="p-4 text-xs font-mono text-gray-700 bg-gray-950 text-green-400 overflow-x-auto whitespace-pre-wrap max-h-96 overflow-y-auto">
-              {semaphoreResult.output}
-            </pre>
-          ) : (
-            <p className="p-4 text-xs text-gray-400">{t.actions.semaphoreNoOutput ?? "No output available"}</p>
-          )}
-        </div>
-      )}
+        </TabPanel>
 
-      {/* SSH 접근 가이드 */}
-      {provision.status === "APPLIED" && provision.vmHostname && (() => {
-        const installUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/api/install?proxy=${encodeURIComponent(teleportProxyUrl)}&host=${encodeURIComponent(provision.vmHostname ?? "")}&user=${encodeURIComponent(sshUser)}`;
-        const curlCmd    = `curl -sL "${installUrl}" | bash`;
-        // 스크립트가 ~/.ssh/config에 short hostname alias를 추가하므로 짧은 형식으로 표시
-        const sshCmd     = `ssh ${sshUser}@${provision.vmHostname}`;
-        return (
-          <div className="mt-4 bg-white rounded-lg border overflow-hidden">
-            <div className="px-4 py-3 border-b bg-gray-50 flex items-center justify-between">
-              <span className="text-xs font-semibold text-gray-700">SSH Access</span>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1.5">
-                  <label className="text-xs text-gray-500">User</label>
+        {/* SSH Access 패널 */}
+        <TabPanel id="ssh">
+          <div className="bg-white rounded-lg border overflow-hidden p-5">
+            {!isApplied || !provision.vmHostname ? (
+              <p className="text-sm text-gray-400 text-center py-8">{t.ssh.readyNote}</p>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {/* 계정 선택 */}
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-gray-500 w-16 shrink-0">{t.ssh.user}</label>
                   <input
-                    className="border rounded px-2 py-1 text-xs font-mono w-24 focus:outline-none focus:ring-1 focus:ring-blue-300"
+                    className="border rounded px-2 py-1 text-xs font-mono w-28 focus:outline-none focus:ring-1 focus:ring-blue-300"
                     value={sshUser}
                     onChange={e => setSshUser(e.target.value)}
                   />
                 </div>
-                <button onClick={() => setScriptOpen(v => !v)}
-                  className="text-xs text-gray-500 hover:text-gray-800 underline underline-offset-2">
-                  {scriptOpen ? "Hide script" : "Show script"}
-                </button>
-              </div>
-            </div>
-            <div className="p-4 flex flex-col gap-3">
-              {/* curl 명령어 */}
-              <div>
-                <p className="text-xs text-gray-500 mb-1.5">Run once to install tsh and configure SSH:</p>
-                <div className="flex items-center gap-2 bg-gray-950 rounded px-3 py-2.5">
-                  <code className="flex-1 text-xs text-green-400 font-mono truncate">{curlCmd}</code>
-                  <button
-                    onClick={() => { navigator.clipboard.writeText(curlCmd); setCurlCopied(true); setTimeout(() => setCurlCopied(false), 2000); }}
-                    className="shrink-0 text-xs text-gray-400 hover:text-white px-2 py-1 rounded border border-gray-700 hover:border-gray-500 transition-colors"
-                  >
-                    {curlCopied ? "✓" : "Copy"}
-                  </button>
-                </div>
-              </div>
 
-              {/* SSH 명령어 */}
-              <div>
-                <p className="text-xs text-gray-500 mb-1.5">Then connect:</p>
-                <div className="flex items-center gap-2 bg-gray-950 rounded px-3 py-2.5">
-                  <code className="flex-1 text-xs text-green-400 font-mono">{sshCmd}</code>
-                  <button
-                    onClick={() => navigator.clipboard.writeText(sshCmd)}
-                    className="shrink-0 text-xs text-gray-400 hover:text-white px-2 py-1 rounded border border-gray-700 hover:border-gray-500 transition-colors"
-                  >
-                    Copy
-                  </button>
-                </div>
-              </div>
-
-              {/* 전체 스크립트 토글 */}
-              {scriptOpen && (
+                {/* 설치 커맨드 */}
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <p className="text-xs text-gray-500">Full script</p>
-                    <button
-                      onClick={() => { fetch(installUrl).then(r => r.text()).then(s => { navigator.clipboard.writeText(s); setScriptCopied(true); setTimeout(() => setScriptCopied(false), 2000); }); }}
-                      className="text-xs text-gray-400 hover:text-gray-700 underline"
+                  <p className="text-xs text-gray-500 mb-1.5">{t.ssh.installNote}</p>
+                  <CmdBlock
+                    cmd={sshCurlCmd}
+                    onCopy={() => { navigator.clipboard.writeText(sshCurlCmd); setCurlCopied(true); setTimeout(() => setCurlCopied(false), 2000); }}
+                    copied={curlCopied}
+                  />
+                </div>
+
+                {/* SSH 커맨드 */}
+                <div>
+                  <p className="text-xs text-gray-500 mb-1.5">{t.ssh.connectNote}</p>
+                  <CmdBlock
+                    cmd={sshCmd}
+                    onCopy={() => { navigator.clipboard.writeText(sshCmd); setSshCopied(true); setTimeout(() => setSshCopied(false), 2000); }}
+                    copied={sshCopied}
+                  />
+                </div>
+
+                {/* 전체 스크립트 토글 */}
+                <div>
+                  <button
+                    onClick={() => {
+                      const next = !scriptOpen;
+                      setScriptOpen(next);
+                      if (next && !scriptContent && sshInstallUrl) {
+                        fetch(sshInstallUrl)
+                          .then(r => r.text())
+                          .then(setScriptContent)
+                          .catch(() => setScriptFetchError(true));
+                      }
+                    }}
+                    className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                  >
+                    {scriptOpen ? `▲ ${t.ssh.hideScript}` : `▼ ${t.ssh.showScript}`}
+                  </button>
+                  {scriptOpen && (
+                    <div className="mt-2">
+                      {scriptFetchError ? (
+                        <p className="text-xs text-red-500">{t.ssh.scriptFetchError}</p>
+                      ) : (
+                      <>
+                      <p className="text-xs text-gray-500 mb-1.5">{t.ssh.fullScript}</p>
+                      <ScriptBlock
+                        content={scriptContent}
+                        onCopy={() => {
+                          if (scriptContent) {
+                            navigator.clipboard.writeText(scriptContent);
+                            setScriptCopied(true);
+                            setTimeout(() => setScriptCopied(false), 2000);
+                          }
+                        }}
+                        copied={scriptCopied}
+                      />
+                      </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </TabPanel>
+      </Tabs>
+
+      {/* 콘솔 계정 선택 모달 */}
+      {consoleSetupOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-lg border shadow-lg w-full max-w-md mx-4 overflow-hidden">
+            {/* 헤더 */}
+            <div className="px-4 py-3 border-b bg-gray-50 flex items-center justify-between">
+              <span className="text-sm font-semibold text-gray-900">{t.console.title}</span>
+              <button onClick={() => setConsoleSetupOpen(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* 바디 */}
+            <div className="p-4 flex flex-col gap-4">
+              {/* 계정 선택 */}
+              <div>
+                <p className="text-xs text-gray-500 mb-2">{t.console.selectAccount}</p>
+                <div className="flex gap-2">
+                  {(["ubuntu", "root"] as const).map(acc => (
+                    <label key={acc}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded border cursor-pointer transition-colors text-sm font-mono ${
+                        consoleLogin === acc
+                          ? "border-blue-400 bg-blue-50 text-blue-700"
+                          : "border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50"
+                      }`}
                     >
-                      {scriptCopied ? "✓ Copied" : "Copy script"}
-                    </button>
-                  </div>
-                  <iframe
-                    src={installUrl}
-                    className="w-full h-72 rounded border border-gray-800 bg-gray-950 text-xs font-mono"
-                    title="install script"
+                      <input
+                        type="radio"
+                        name="consoleLogin"
+                        value={acc}
+                        checked={consoleLogin === acc}
+                        onChange={() => setConsoleLogin(acc)}
+                        className="sr-only"
+                      />
+                      <span>{acc}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* 설치 커맨드 */}
+              {consoleCurlCmd && (
+                <div>
+                  <p className="text-xs text-gray-500 mb-1.5">{t.console.installNote}</p>
+                  <CmdBlock
+                    cmd={consoleCurlCmd}
+                    onCopy={() => { navigator.clipboard.writeText(consoleCurlCmd); setConsoleCopied(true); setTimeout(() => setConsoleCopied(false), 2000); }}
+                    copied={consoleCopied}
                   />
                 </div>
               )}
+
+              {/* 웹 콘솔 안내 */}
+              <div className="rounded border border-gray-200 bg-gray-50 px-3 py-2.5">
+                <p className="text-xs text-gray-500 leading-relaxed">{t.console.webConsoleNote}</p>
+              </div>
+            </div>
+
+            {/* 푸터 */}
+            <div className="px-4 py-3 border-t bg-gray-50 flex items-center justify-end gap-2">
+              <button
+                onClick={() => setConsoleSetupOpen(false)}
+                className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 border border-gray-200 rounded hover:bg-white transition-colors"
+              >
+                {t.console.cancel}
+              </button>
+              <button
+                onClick={() => { setConsoleSetupOpen(false); setConsoleOpen(true); }}
+                className="px-3 py-1.5 text-sm font-medium bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+              >
+                {t.console.connect}
+              </button>
             </div>
           </div>
-        );
-      })()}
+        </div>
+      )}
 
       {consoleOpen && (
-        <TerminalOverlay crName={provision.crName} login="root" onClose={() => setConsoleOpen(false)} />
+        <TerminalOverlay crName={provision.crName} login={consoleLogin} onClose={() => setConsoleOpen(false)} />
       )}
 
       <ConfirmModal

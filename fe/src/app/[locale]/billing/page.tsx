@@ -2,16 +2,23 @@
 
 import Layout from "@/components/Layout/Layout";
 import { useMsg } from "@/providers/MessagesProvider";
+import { useEffect, useState } from "react";
 
 interface BillingMessages {
   title: string;
   description: string;
   summary: {
     title: string;
-    cpu: string;
-    storage: string;
-    network: string;
-    unit: { cpu: string; storage: string; network: string };
+    provisions: string;
+    activeProvisions: string;
+    consoleSessions: string;
+    consoleMinutes: string;
+    unit: {
+      provisions: string;
+      activeProvisions: string;
+      consoleSessions: string;
+      consoleMinutes: string;
+    };
   };
   history: {
     title: string;
@@ -21,16 +28,55 @@ interface BillingMessages {
   status: { paid: string; pending: string; overdue: string };
 }
 
+interface BillingSummary {
+  totalProvisions: number;
+  activeProvisions: number;
+  totalConsoleSessions: number;
+  totalConsoleMinutes: number;
+}
+
 export default function BillingPage() {
   const t = useMsg("Billing") as unknown as BillingMessages;
+  const [summary, setSummary] = useState<BillingSummary | null>(null);
+
+  useEffect(() => {
+    fetch("/api/billing/summary")
+      .then((r) => r.json())
+      .then((data: BillingSummary) => setSummary(data))
+      .catch(() => {});
+  }, []);
+
   if (!t) return null;
 
-  // Placeholder data — replace with real API calls
-  const usageSummary = [
-    { label: t.summary.cpu, value: "0", unit: t.summary.unit.cpu },
-    { label: t.summary.storage, value: "0", unit: t.summary.unit.storage },
-    { label: t.summary.network, value: "0", unit: t.summary.unit.network },
-  ];
+  const usageSummary = summary
+    ? [
+        {
+          label: t.summary.provisions,
+          value: String(summary.totalProvisions),
+          unit: t.summary.unit.provisions,
+        },
+        {
+          label: t.summary.activeProvisions,
+          value: String(summary.activeProvisions),
+          unit: t.summary.unit.activeProvisions,
+        },
+        {
+          label: t.summary.consoleSessions,
+          value: String(summary.totalConsoleSessions),
+          unit: t.summary.unit.consoleSessions,
+        },
+        {
+          label: t.summary.consoleMinutes,
+          value: String(summary.totalConsoleMinutes),
+          unit: t.summary.unit.consoleMinutes,
+        },
+      ]
+    : [
+        { label: t.summary.provisions, value: "—", unit: t.summary.unit.provisions },
+        { label: t.summary.activeProvisions, value: "—", unit: t.summary.unit.activeProvisions },
+        { label: t.summary.consoleSessions, value: "—", unit: t.summary.unit.consoleSessions },
+        { label: t.summary.consoleMinutes, value: "—", unit: t.summary.unit.consoleMinutes },
+      ];
 
   return (
     <Layout navDomain="Nav" sidebarDomain="Billing">
@@ -45,7 +91,7 @@ export default function BillingPage() {
           <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
             {t.summary.title}
           </h2>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             {usageSummary.map((item) => (
               <div key={item.label} className="bg-white rounded-lg border p-4">
                 <p className="text-xs text-gray-500 mb-1">{item.label}</p>

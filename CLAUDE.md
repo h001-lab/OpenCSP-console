@@ -46,6 +46,9 @@ infrastructure/
   ├── k8s/          → Kubernetes (flux/noop)
   ├── teleport/     → SSH PAM proxy (http/noop)
   ├── websocket/    → Terminal console WebSocket
+  ├── semaphore/    → Semaphore CI/CD integration (http/noop)
+  ├── proxmox/      → Proxmox node polling
+  ├── ai/           → Spring AI config (OpenAI/Gemini)
   └── config/       → ConfigStore, DB-backed env config with encryption
 ```
 
@@ -53,7 +56,7 @@ Key pattern: Repository interfaces live in `domain/`, implementations in `infras
 
 ### Frontend Architecture
 
-All pages live under `fe/src/app/[locale]/` (locales: en, ko, jp). The routing is locale-prefixed.
+All pages live under `fe/src/app/[locale]/` (locales: en, ko). The routing is locale-prefixed.
 
 **Core providers** (in root `[locale]/layout.tsx`):
 - `MessagesProvider` — loads `/messages/{locale}.json` and provides `useMsg(domain)` hook
@@ -97,7 +100,7 @@ Messages are JSON files at `fe/public/messages/{locale}.json`. Structure is nest
 ### Adding a New Page
 
 1. Create `fe/src/app/[locale]/my-page/page.tsx` with `"use client"`, use `useMsg("MyDomain")` and `<Layout navDomain="Nav" sidebarDomain="MyDomain">`
-2. Add `"MyDomain"` key (with `sidebar` array) to all `fe/public/messages/*.json` files
+2. Add `"MyDomain"` key (with `sidebar` array) to `en.json` and `ko.json`
 3. For admin pages, add the new path to `"Admin".sidebar` in messages and use `<Layout sidebarDomain="Admin">`
 
 ### Adding a New Backend Feature
@@ -125,4 +128,4 @@ Messages are JSON files at `fe/public/messages/{locale}.json`. Structure is nest
 
 **Frontend** (`fe/.env.example`): requires `NEXTAUTH_SECRET`, `ZITADEL_ISSUER`, `ZITADEL_CLIENT_ID`, `BACKEND_URL`.
 
-Default DB is H2 in-memory for development. PostgreSQL/MySQL for production (set `SPRING_DATASOURCE_*` env vars).
+Default DB is H2 in-memory for development. SQLite is available as a file-based dev alternative. PostgreSQL/MariaDB for production (set `SPRING_DATASOURCE_*` env vars).

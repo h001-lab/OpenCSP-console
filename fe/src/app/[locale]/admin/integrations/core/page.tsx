@@ -7,6 +7,7 @@ import { IamConfigSection } from "../IamSection";
 import { PamConfigSection } from "../PamSection";
 import { SemaphoreConfigSection } from "../SemaphoreSection";
 import { K8sSection } from "../K8sSection";
+import { BillingConfigSection } from "../BillingSection";
 import { CategoryTables, CORE_CATEGORIES } from "../CategoryTables";
 import { IntegrationsMessages } from "../types";
 
@@ -56,6 +57,7 @@ export default function CorePage() {
       <IamConfigSection configs={cfg.configs} onSaved={cfg.fetchConfigs} t={t} />
       <PamConfigSection configs={cfg.configs} onSaved={cfg.fetchConfigs} t={t} />
       <K8sSection configs={cfg.configs} onSaved={cfg.fetchConfigs} t={t} />
+      <BillingConfigSection configs={cfg.configs} onSaved={cfg.fetchConfigs} t={t} />
       <CategoryTables {...tableProps} categories={CORE_CATEGORIES} />
       <SemaphoreConfigSection configs={cfg.configs} onSaved={cfg.fetchConfigs} t={t} />
     </div>

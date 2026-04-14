@@ -14,13 +14,12 @@ import java.util.Map;
  *   semaphore.project.id    — 프로젝트 ID
  *   semaphore.repository.id — 프로젝트에 등록된 Git Repository ID
  *   semaphore.playbook      — 실행할 playbook 경로 (예: site.yml)
- *   semaphore.ssh.key.id    — (선택) 고정 SSH Key ID. 미설정 시 Terraform output의 ssh_private_key로 동적 생성
  *   semaphore.environment.id — (선택) 공통 변수 그룹 ID. 미설정 시 프로비저닝마다 동적 생성 후 삭제
  * </pre>
  */
 public interface SemaphoreClient {
 
-    /** Semaphore가 설정되어 있는지 여부 */
+    /** 현재 레이어의 도구(semaphore 같은)가 설정되어 있는지 여부 */
     boolean isConfigured();
 
     /**

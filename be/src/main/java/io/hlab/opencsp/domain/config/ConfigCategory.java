@@ -8,6 +8,7 @@ package io.hlab.opencsp.domain.config;
  * - AI        : AI 모델 연동 설정 (OpenAI 호환, Vertex AI 등)
  * - SEMAPHORE : Ansible Semaphore 연동 설정 (post-provisioning 자동화)
  * - PROVISION : 프로비저닝 동작 설정 (이력 보관 기간 등)
+ * - BILLING   : 빌링 공급자 설정 (Lago 등)
  * - GENERAL   : 앱 전반 설정 (배너, 공지 등)
  */
 public enum ConfigCategory {
@@ -16,5 +17,6 @@ public enum ConfigCategory {
     AI,
     SEMAPHORE,
     PROVISION,
+    BILLING,
     GENERAL
 }

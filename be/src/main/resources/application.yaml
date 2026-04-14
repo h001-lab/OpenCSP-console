@@ -43,10 +43,6 @@ spring:
       max-file-size: 10MB
       max-request-size: 15MB
 
-  output:
-    ansi:
-      enabled: ALWAYS
-
   # Spring AI: Vertex AI / OpenAI(호환) 설정
   # app.ai.enabled=true 일 때만 AiConfig 가 빈을 등록함 (기본값: false)
   ai:
@@ -71,8 +67,11 @@ spring:
           max-tokens: ${SPRING_AI_OPENAI_CHAT_OPTIONS_MAX_TOKENS:1024}
 
 logging:
-  pattern:
-    console: "%clr(%-5level){green} %clr(%logger.%M\\(\\)){cyan}: %msg%n"
+  structured:
+    format:
+      # ECS(Elastic Common Schema) JSON 포맷 — OTel Collector / Datadog Agent 호환
+      # 환경변수 LOG_FORMAT으로 오버라이드 가능 (예: LOG_FORMAT=logstash)
+      console: ${LOG_FORMAT:ecs}
   level:
     io:
       hlab:

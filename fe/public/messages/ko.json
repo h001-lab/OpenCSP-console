@@ -6,7 +6,59 @@
     }
   },
   "Nav": {
-    "title": "OpenCSP 콘솔"
+    "title": "OpenCSP 콘솔",
+    "menuOpen": "메뉴 열기"
+  },
+  "LoginButton": {
+    "loading": "로딩 중...",
+    "setupIntegrations": "통합 설정",
+    "dashboard": "대시보드",
+    "billing": "청구",
+    "settings": "설정",
+    "admin": "관리자",
+    "logout": "로그아웃",
+    "signIn": "로그인"
+  },
+  "ServiceSearch": {
+    "title": "전체 서비스",
+    "placeholder": "서비스 검색...",
+    "notFound": "서비스를 찾을 수 없습니다",
+    "categories": {
+      "Compute": "컴퓨트",
+      "Network": "네트워크",
+      "Storage": "스토리지",
+      "IAM": "IAM",
+      "Monitoring": "모니터링",
+      "Billing": "청구"
+    },
+    "services": {
+      "Instances": "인스턴스",
+      "Network": "네트워크",
+      "Firewall": "방화벽",
+      "Volumes": "볼륨",
+      "Backups": "백업",
+      "IAM": "IAM",
+      "Monitoring": "모니터링",
+      "Billing": "청구"
+    }
+  },
+  "Console": {
+    "status": {
+      "connecting": "연결 중",
+      "connected": "연결됨",
+      "disconnected": "연결 종료",
+      "error": "오류"
+    },
+    "close": "닫기",
+    "title": "콘솔",
+    "connectionFailed": "연결 실패",
+    "sessionCreateFailed": "세션 생성 실패",
+    "sessionIdMissing": "세션 ID를 받지 못했습니다",
+    "connectingMsg": "콘솔 연결 중...",
+    "connectedMsg": "연결됨",
+    "disconnectedMsg": "연결 종료",
+    "wsError": "WebSocket 연결 오류",
+    "wsErrorMsg": "연결 오류"
   },
   "Home": {
     "sidebar": [
@@ -17,7 +69,7 @@
     ],
     "hero": {
       "title": "OpenCSP 콘솔에 오신 것을 환영합니다",
-      "description": "Proxmox와 클라우드 네이티브 도구로 구동되는 오픈소스 클라우드 플랫폼입니다. 나만의 CSP 인프라를 한 곳에서 구축하고 관리하세요."
+      "description": "IaaS와 클라우드 네이티브 도구로 구동되는 오픈소스 클라우드 서비스 플랫폼입니다. \n벤더에 종속되지 않는 나만의 멀티 클라우드 서비스를 구축하세요."
     },
     "news": {
       "title": "최신 뉴스",
@@ -186,6 +238,7 @@
         "AI": "OpenAI 호환 모델 (Gemini 포함), Vertex AI 설정",
         "SEMAPHORE": "Ansible Semaphore post-provisioning 자동화",
         "PROVISION": "프로비저닝 동작 설정 (이력 보관 기간 등)",
+        "BILLING": "빌링 공급자 연동 (Lago 등)",
         "GENERAL": "앱 전반 설정"
       },
       "iam": {
@@ -289,6 +342,18 @@
             "placeholder": "Join 토큰"
           }
         ]
+      },
+      "billing": {
+        "providerLabel": "빌링 공급자",
+        "unsaved": "미저장",
+        "testBtn": "연결 테스트",
+        "testing": "테스트 중...",
+        "testPassed": "테스트 성공",
+        "testFailed": "테스트 실패",
+        "saveBtn": "저장",
+        "saving": "저장 중...",
+        "savedOk": "저장되었습니다",
+        "unchangedHint": "변경 없음 (기존 값 유지하려면 빈칸으로 두세요)"
       },
       "nodes": {
         "sectionTitle": "노드",
@@ -514,14 +579,16 @@
     ],
     "description": "리소스 사용량과 청구 내역을 확인합니다.",
     "summary": {
-      "title": "이번 달 사용량",
-      "cpu": "CPU",
-      "storage": "스토리지",
-      "network": "네트워크",
+      "title": "사용량 현황",
+      "provisions": "전체 프로비전",
+      "activeProvisions": "활성 VM",
+      "consoleSessions": "콘솔 세션",
+      "consoleMinutes": "콘솔 사용 시간",
       "unit": {
-        "cpu": "core·h",
-        "storage": "GB",
-        "network": "GB"
+        "provisions": "건",
+        "activeProvisions": "대",
+        "consoleSessions": "세션",
+        "consoleMinutes": "분"
       }
     },
     "history": {
@@ -665,6 +732,11 @@
     },
     "detail": {
       "backToList": "← 목록으로",
+      "tabs": {
+        "overview": "개요",
+        "ansible": "Ansible",
+        "ssh": "SSH 접근"
+      },
       "fields": {
         "vmId": "VM ID",
         "crName": "CR 이름",
@@ -673,15 +745,42 @@
         "userId": "사용자 ID",
         "status": "상태",
         "createdAt": "생성일",
-        "updatedAt": "업데이트"
+        "updatedAt": "업데이트",
+        "semaphoreStatus": "Ansible 상태",
+        "semaphoreTaskId": "Ansible 태스크"
       },
       "actions": {
-        "console": "콘솔",
+        "console": "연결",
         "edit": "수정",
         "stop": "정지",
-        "delete": "삭제",
-        "semaphore": "Semaphore 로그",
-        "semaphoreNoOutput": "출력 없음"
+        "delete": "삭제"
+      },
+      "console": {
+        "title": "콘솔 연결",
+        "selectAccount": "로그인 계정",
+        "connect": "연결",
+        "cancel": "취소",
+        "installNote": "tsh 설치 및 SSH 설정 (최초 1회 실행):",
+        "connectNote": "웹 콘솔로 연결:",
+        "webConsoleNote": "웹 콘솔은 Teleport(tsh)를 통해 연결됩니다. tsh가 설치되어 있지 않다면 위의 설치 명령어를 먼저 실행하세요."
+      },
+      "ansible": {
+        "taskId": "태스크",
+        "refresh": "새로고침",
+        "noOutput": "출력 없음",
+        "notTriggered": "이 인스턴스에 대해 Ansible이 실행되지 않았습니다."
+      },
+      "ssh": {
+        "user": "계정",
+        "readyNote": "인스턴스가 APPLIED 상태이고 hostname이 있어야 SSH 정보를 확인할 수 있습니다.",
+        "installNote": "tsh 설치 및 SSH 설정 (최초 1회 실행):",
+        "connectNote": "SSH 연결:",
+        "showScript": "스크립트 보기",
+        "hideScript": "스크립트 숨기기",
+        "fullScript": "전체 스크립트",
+        "copyScript": "스크립트 복사",
+        "copied": "✓ 복사됨",
+        "scriptFetchError": "스크립트 로드 실패."
       },
       "notReady": "해당 기능은 준비 중입니다.",
       "deleteFailed": "삭제 실패",

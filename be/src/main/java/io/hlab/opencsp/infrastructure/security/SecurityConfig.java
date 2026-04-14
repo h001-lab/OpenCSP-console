@@ -30,6 +30,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.oauth2.server.resource.web.BearerTokenResolver;
 import org.springframework.security.oauth2.server.resource.web.DefaultBearerTokenResolver;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.lang.NonNull;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
@@ -70,6 +71,8 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             // none 모드일 때 admin 권한 주입 (JWT 필터보다 먼저 실행)
             .addFilterBefore(new NoIamAuthFilter(configStore), BasicAuthenticationFilter.class)
+            // MDC iam_session_id 설정 (BearerTokenAuthenticationFilter 이후 — SecurityContext 채워진 뒤)
+            .addFilterAfter(new MdcContextFilter(), BearerTokenAuthenticationFilter.class)
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/login/**", "/oauth2/**").permitAll()

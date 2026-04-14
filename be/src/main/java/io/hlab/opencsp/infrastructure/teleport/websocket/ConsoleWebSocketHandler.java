@@ -5,19 +5,18 @@ import io.hlab.opencsp.domain.console.ConsoleSession;
 import io.hlab.opencsp.infrastructure.teleport.TeleportClient;
 import io.hlab.opencsp.infrastructure.teleport.tsh.TshCertManager;
 import io.hlab.opencsp.infrastructure.teleport.tsh.TshSshSession;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-import org.springframework.web.socket.*;
-import org.springframework.web.socket.handler.AbstractWebSocketHandler;
-
 import java.net.URI;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
+import org.springframework.stereotype.Component;
+import org.springframework.web.socket.*;
+import org.springframework.web.socket.handler.AbstractWebSocketHandler;
 
 /**
  * WebSocket 프록시 핸들러 (tsh 임시 구현).
@@ -36,9 +35,9 @@ import java.util.concurrent.Executors;
 @RequiredArgsConstructor
 public class ConsoleWebSocketHandler extends AbstractWebSocketHandler {
 
-    private final ConsoleService   consoleService;
-    private final TeleportClient   teleportClient;
-    private final TshCertManager   tshCertManager;
+    private final ConsoleService consoleService;
+    private final TeleportClient teleportClient;
+    private final TshCertManager tshCertManager;
 
     /** sessionId → SSH 세션 */
     private final ConcurrentHashMap<String, TshSshSession> sshSessions = new ConcurrentHashMap<>();
@@ -55,18 +54,34 @@ public class ConsoleWebSocketHandler extends AbstractWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession clientSession) {
-        String sessionId = extractSessionId(clientSession.getUri());
-        log.info("[Console] 클라이언트 연결: sessionId={}", sessionId);
+        String consoleSessionId = extractSessionId(clientSession.getUri());
+        // HTTP 스레드에서는 iam_session_id(JWT jti)가 MDC에 있음 — console_session_id는 addKeyValue로 보완
+        log.atInfo()
+                .addKeyValue("console_session_id", consoleSessionId)
+                .log("클라이언트 연결");
 
-        ConsoleSession consoleSession = consoleService.findBySessionId(sessionId).orElse(null);
+        ConsoleSession consoleSession = consoleService.findBySessionId(consoleSessionId).orElse(null);
         if (consoleSession == null) {
-            log.warn("[Console] 세션을 찾을 수 없음: sessionId={}", sessionId);
+            log.atWarn()
+                    .addKeyValue("console_session_id", consoleSessionId)
+                    .log("세션을 찾을 수 없음");
             closeQuietly(clientSession, CloseStatus.BAD_DATA);
             return;
         }
 
-        // tsh 인증서 확인/갱신 후 SSH 연결 (블로킹 — 최초 login에만 오래 걸림)
+        // WebSocket 핸드셰이크는 Bearer 헤더를 전달할 수 없어 MdcContextFilter가 동작하지 않는다.
+        // HTTP REST로 세션 생성 시 저장해 둔 iamSessionId를 복원해 릴레이 스레드까지 전파한다.
+        String storedSessionId = consoleSession.getIamSessionId();
+        if (storedSessionId != null) {
+            MDC.put("iam_session_id", storedSessionId);
+        }
+
+        // 릴레이 스레드로 넘기기 전에 HTTP 스레드 MDC 스냅샷 캡처
+        Map<String, String> mdc = MDC.getCopyOfContextMap();
+
         relayExecutor.submit(() -> {
+            if (mdc != null) MDC.setContextMap(mdc);
+            MDC.put("console_session_id", consoleSessionId);
             try {
                 tshCertManager.ensureCert();
 
@@ -76,17 +91,19 @@ public class ConsoleWebSocketHandler extends AbstractWebSocketHandler {
                         consoleSession.getTeleportNodeId(),
                         consoleSession.getTeleportLogin()
                 );
-                sshSessions.put(sessionId, ssh);
-                consoleService.markActive(sessionId);
-                log.info("[Console] SSH 연결 완료: sessionId={}", sessionId);
+                sshSessions.put(consoleSessionId, ssh);
+                consoleService.markActive(consoleSessionId);
+                log.atInfo().log("SSH 연결 완료");
 
-                // Teleport → FE 릴레이 루프
-                startRelayLoop(sessionId, ssh, clientSession);
+                // Teleport → FE 릴레이 루프 (별도 스레드, MDC 전달)
+                startRelayLoop(consoleSessionId, ssh, clientSession, MDC.getCopyOfContextMap());
 
             } catch (Exception e) {
-                log.error("[Console] SSH 연결 실패: sessionId={}", sessionId, e);
-                consoleService.markFailed(sessionId, e.getMessage());
+                log.atError().setCause(e).log("SSH 연결 실패");
+                consoleService.markFailed(consoleSessionId, e.getMessage());
                 closeQuietly(clientSession, CloseStatus.SERVER_ERROR);
+            } finally {
+                MDC.clear();
             }
         });
     }
@@ -94,8 +111,8 @@ public class ConsoleWebSocketHandler extends AbstractWebSocketHandler {
     /** FE → SSH: 키 입력 바이트를 SSH stdin에 그대로 쓴다 */
     @Override
     protected void handleBinaryMessage(WebSocketSession clientSession, BinaryMessage message) {
-        String sessionId = extractSessionId(clientSession.getUri());
-        TshSshSession ssh = sshSessions.get(sessionId);
+        String consoleSessionId = extractSessionId(clientSession.getUri());
+        TshSshSession ssh = sshSessions.get(consoleSessionId);
         if (ssh == null || !ssh.isAlive()) return;
 
         try {
@@ -105,15 +122,18 @@ public class ConsoleWebSocketHandler extends AbstractWebSocketHandler {
             ssh.stdin().write(bytes);
             ssh.stdin().flush();
         } catch (Exception e) {
-            log.warn("[Console] SSH stdin 쓰기 실패: sessionId={}", sessionId, e);
+            log.atWarn()
+                    .addKeyValue("console_session_id", consoleSessionId)
+                    .setCause(e)
+                    .log("SSH stdin 쓰기 실패");
         }
     }
 
     /** FE → SSH: resize 이벤트 */
     @Override
     protected void handleTextMessage(WebSocketSession clientSession, TextMessage message) {
-        String sessionId = extractSessionId(clientSession.getUri());
-        TshSshSession ssh = sshSessions.get(sessionId);
+        String consoleSessionId = extractSessionId(clientSession.getUri());
+        TshSshSession ssh = sshSessions.get(consoleSessionId);
         if (ssh == null) return;
 
         String payload = message.getPayload();
@@ -126,28 +146,42 @@ public class ConsoleWebSocketHandler extends AbstractWebSocketHandler {
             int rows = node.path("rows").asInt(24);
             ssh.resize(cols, rows);
         } catch (Exception e) {
-            log.warn("[Console] resize 처리 실패: sessionId={}", sessionId, e);
+            log.atWarn()
+                    .addKeyValue("console_session_id", consoleSessionId)
+                    .setCause(e)
+                    .log("resize 처리 실패");
         }
     }
 
     @Override
     public void afterConnectionClosed(WebSocketSession clientSession, CloseStatus status) {
-        String sessionId = extractSessionId(clientSession.getUri());
-        log.info("[Console] 클라이언트 연결 종료: sessionId={}, status={}", sessionId, status);
+        String consoleSessionId = extractSessionId(clientSession.getUri());
+        log.atInfo()
+                .addKeyValue("close_status", status.toString())
+                .log("클라이언트 연결 종료");
 
-        TshSshSession ssh = sshSessions.remove(sessionId);
+        TshSshSession ssh = sshSessions.remove(consoleSessionId);
         if (ssh != null) ssh.close();
-        consoleService.markDisconnected(sessionId);
+        consoleService.markDisconnected(consoleSessionId);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
     // SSH stdout → FE 릴레이
     // ──────────────────────────────────────────────────────────────────────────
 
-    private void startRelayLoop(String sessionId, TshSshSession ssh, WebSocketSession clientSession) {
+    /**
+     * SSH stdout을 FE WebSocket으로 중계하는 루프.
+     *
+     * <p>MDC context (iam_session_id, console_session_id) must be set by the caller.
+     * 별도 스레드로 실행되므로 캡처한 {@code mdc} 스냅샷을 전달받아 복원한다.
+     */
+    private void startRelayLoop(
+            String consoleSessionId, TshSshSession ssh,
+            WebSocketSession clientSession, Map<String, String> mdc) {
         relayExecutor.submit(() -> {
-            byte[] buf = new byte[4096];
+            if (mdc != null) MDC.setContextMap(mdc);
             try {
+                byte[] buf = new byte[4096];
                 int read;
                 while (ssh.isAlive() && clientSession.isOpen()
                         && (read = ssh.stdout().read(buf)) != -1) {
@@ -158,14 +192,15 @@ public class ConsoleWebSocketHandler extends AbstractWebSocketHandler {
                 }
             } catch (Exception e) {
                 if (ssh.isAlive()) {
-                    log.warn("[Console] SSH stdout 읽기 실패: sessionId={}", sessionId, e);
+                    log.atWarn().setCause(e).log("SSH stdout 읽기 실패");
                 }
             } finally {
-                log.info("[Console] 릴레이 루프 종료: sessionId={}", sessionId);
+                log.atInfo().log("릴레이 루프 종료");
                 closeQuietly(clientSession, CloseStatus.NORMAL);
-                TshSshSession s = sshSessions.remove(sessionId);
+                TshSshSession s = sshSessions.remove(consoleSessionId);
                 if (s != null) s.close();
-                consoleService.markDisconnected(sessionId);
+                consoleService.markDisconnected(consoleSessionId);
+                MDC.clear();
             }
         });
     }

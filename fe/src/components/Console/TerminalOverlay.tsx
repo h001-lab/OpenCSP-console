@@ -1,9 +1,61 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useAuthStore } from "@/stores/authStore";
 import { Terminal } from "xterm";
+
+// 동일한 crName+login에 대한 동시 세션 생성 요청을 deduplicate한다.
+// React StrictMode가 useEffect를 mount→cleanup→remount 순서로 두 번 실행하면
+// 두 init() 모두 fetch를 dispatch하기 전에 cleanup이 동기적으로 실행되므로,
+// 두 번째 mount도 pending Promise를 재사용해 세션을 한 번만 생성한다.
+const pendingSessionCreations = new Map<string, Promise<string>>();
+
+function createSession(userId: string, crName: string, login: string, errorFallback: string): Promise<string> {
+  const key = `${userId}::${crName}::${login}`;
+  const existing = pendingSessionCreations.get(key);
+  if (existing) return existing;
+
+  const promise = fetch("/api/console/sessions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ crName, login }),
+  })
+    .then(async (res) => {
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.message ?? json.error ?? errorFallback);
+      }
+      return res.json();
+    })
+    .then((json) => {
+      const sessionId: string = json.data?.sessionId ?? json.sessionId;
+      if (!sessionId) throw new Error("Failed to receive session ID");
+      return sessionId;
+    })
+    .finally(() => {
+      pendingSessionCreations.delete(key);
+    });
+
+  pendingSessionCreations.set(key, promise);
+  return promise;
+}
 import { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
+import { useMsg } from "@/providers/MessagesProvider";
+
+interface ConsoleMessages {
+  status: { connecting: string; connected: string; disconnected: string; error: string };
+  close: string;
+  title: string;
+  connectionFailed: string;
+  sessionCreateFailed: string;
+  sessionIdMissing: string;
+  connectingMsg: string;
+  connectedMsg: string;
+  disconnectedMsg: string;
+  wsError: string;
+  wsErrorMsg: string;
+}
 
 interface Props {
   /** 인스턴스 CR 이름 (표시용) */
@@ -16,47 +68,47 @@ interface Props {
 type Status = "connecting" | "connected" | "disconnected" | "error";
 
 export default function TerminalOverlay({ crName, login = "root", onClose }: Props) {
+  const userId    = useAuthStore((s) => s.user?.id ?? "anonymous");
   const termRef   = useRef<HTMLDivElement>(null);
   const termInst  = useRef<Terminal | null>(null);
   const fitAddon  = useRef<FitAddon | null>(null);
   const wsRef     = useRef<WebSocket | null>(null);
   const [status, setStatus] = useState<Status>("connecting");
   const [errMsg, setErrMsg] = useState<string | null>(null);
+  // const initialized = useRef(false);
+  const t = useMsg("Console") as unknown as ConsoleMessages | undefined;
+  const tRef = useRef(t);
+  tRef.current = t;
 
   useEffect(() => {
+    // if (initialized.current) return;
+    // initialized.current = true;
+    
+    let inputBuffer = "";
+    let echoSkipBuffer = ""; // 서버에서 돌아올 때 무시할 문자열 (ANSI 제외)
+    let isRawMode = false; // raw 모드 (VI 등 단축키 같은거 프로세스가 직접 처리할 경우)
     let cancelled = false;
 
     async function init() {
-      // 1. 세션 생성 요청
+      // 세션 생성 요청
       let sessionId: string;
       try {
-        const res = await fetch("/api/console/sessions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ crName, login }),
-        });
-        if (!res.ok) {
-          const json = await res.json().catch(() => ({}));
-          throw new Error(json.message ?? json.error ?? "세션 생성 실패");
-        }
-        const json = await res.json();
-        sessionId = json.data?.sessionId ?? json.sessionId;
-        if (!sessionId) throw new Error("sessionId를 받지 못했습니다.");
+        sessionId = await createSession(userId, crName, login, tRef.current?.sessionCreateFailed ?? "Session creation failed");
       } catch (e) {
         if (!cancelled) {
           setStatus("error");
-          setErrMsg(e instanceof Error ? e.message : "세션 생성 실패");
+          setErrMsg(e instanceof Error ? e.message : (tRef.current?.sessionCreateFailed ?? "Session creation failed"));
         }
         return;
       }
 
       if (cancelled || !termRef.current) return;
 
-      // 2. xterm.js 초기화
       const term = new Terminal({
         cursorBlink: true,
         fontSize: 14,
         fontFamily: "'JetBrains Mono', 'Fira Code', 'Menlo', monospace",
+        convertEol: true,
         theme: {
           background: "#1e1e2e",
           foreground: "#cdd6f4",
@@ -80,9 +132,8 @@ export default function TerminalOverlay({ crName, login = "root", onClose }: Pro
       termInst.current = term;
       fitAddon.current = fit;
 
-      term.writeln("\x1b[36m콘솔 연결 중...\x1b[0m");
+      term.writeln(`\x1b[36m${tRef.current?.connectingMsg ?? "Connecting to console..."}\x1b[0m`);
 
-      // 3. WebSocket 연결 (BE → Teleport 프록시)
       const beWsUrl = process.env.NEXT_PUBLIC_BE_WS_URL;
       const wsBase = beWsUrl
         ? beWsUrl.replace(/^http/, "ws")
@@ -94,41 +145,104 @@ export default function TerminalOverlay({ crName, login = "root", onClose }: Pro
       ws.onopen = () => {
         if (cancelled) return;
         setStatus("connected");
-        term.writeln("\x1b[32m연결됨\x1b[0m\r\n");
+        term.writeln(`\x1b[32m${tRef.current?.connectedMsg ?? "Connected"}\x1b[0m\r\n`);
         fit.fit();
-        // 초기 리사이즈 전송
+        
         const { cols, rows } = term;
-        ws.send(JSON.stringify({ type: "resize", cols, rows }));
+        ws.send(JSON.stringify({ type: "resize", cols, rows })); // 초기 리사이즈 전송
       };
 
       ws.onmessage = (event) => {
         if (cancelled) return;
         if (event.data instanceof ArrayBuffer) {
-          term.write(new Uint8Array(event.data));
+          let incomingData = new TextDecoder().decode(event.data);
+
+          // vi 진입/종료 감지 (전체 화면 앱 진입 시 터미널이 바로 전송 모드로 전환되어야 함)
+          if (incomingData.includes("\x1b[?1049h")) {
+            isRawMode = true;
+            echoSkipBuffer = ""; 
+            inputBuffer = "";
+          } else if (incomingData.includes("\x1b[?1049l")) {
+            isRawMode = false;
+          }
+
+          if (isRawMode) {
+            term.write(incomingData);
+            return;
+          }
+
+          // echoSkipBuffer에 내용이 있는 동안만 작동
+          if (echoSkipBuffer.length > 0) {
+            // 1ANSI 제어 문자를 무시하고 실제 텍스트만 비교하기 위한 정규식 (서버가 보낸 데이터에서 제어 문자는 터미널에 실행시키고, 텍스트만 버퍼와 비교)
+            const ansiRegex = /^\x1b\[[0-9;?]*[a-zA-Z]/;
+
+            while (incomingData.length > 0 && echoSkipBuffer.length > 0) {
+              const match = incomingData.match(ansiRegex);
+              if (match) {
+                term.write(match[0]);  // ANSI 코드는 필터링하지 않고 바로 터미널에 적용 (커서 위치 등 중요함)
+                incomingData = incomingData.slice(match[0].length);
+                continue;
+              }
+
+              // 글자 비교 (개행 문자는 \r, \n 유연하게 처리)
+              const charIn = incomingData[0];
+              const charSkip = echoSkipBuffer[0];
+
+              if (charIn === charSkip || (charIn === '\n' && charSkip === '\r')) {
+                incomingData = incomingData.slice(1);
+                echoSkipBuffer = echoSkipBuffer.slice(1);
+              } else {
+                echoSkipBuffer = "";
+                break;
+              }
+            }
+          }
+
+          if (incomingData) {
+            term.write(incomingData);
+          }
         }
       };
 
       ws.onclose = () => {
         if (cancelled) return;
         setStatus("disconnected");
-        term.writeln("\r\n\x1b[33m연결 종료\x1b[0m");
+        term.writeln(`\r\n\x1b[33m${tRef.current?.disconnectedMsg ?? "Connection closed"}\x1b[0m`);
       };
 
       ws.onerror = () => {
         if (cancelled) return;
         setStatus("error");
-        setErrMsg("WebSocket 연결 오류");
-        term.writeln("\r\n\x1b[31m연결 오류\x1b[0m");
+        setErrMsg(tRef.current?.wsError ?? "WebSocket connection error");
+        term.writeln(`\r\n\x1b[31m${tRef.current?.wsErrorMsg ?? "Connection error"}\x1b[0m`);
       };
 
-      // xterm → BE: 키 입력 전송
       term.onData((data) => {
-        if (ws.readyState === WebSocket.OPEN) {
+        if (ws.readyState !== WebSocket.OPEN) return;
+
+        if (isRawMode) {
           ws.send(new TextEncoder().encode(data));
+          return;
+        }
+
+        if (data === "\r") { // Enter
+          echoSkipBuffer = inputBuffer + "\r\n";
+          ws.send(new TextEncoder().encode(inputBuffer + "\n"));
+          term.write("\r\n");
+          inputBuffer = "";
+        } 
+        else if (data === "\u007F") { // Backspace
+          if (inputBuffer.length > 0) {
+            inputBuffer = inputBuffer.slice(0, -1);
+            term.write("\b \b");
+          }
+        } 
+        else {
+          inputBuffer += data;
+          term.write(data);
         }
       });
 
-      // xterm → BE: 리사이즈 전송
       term.onResize(({ cols, rows }) => {
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({ type: "resize", cols, rows }));
@@ -157,10 +271,10 @@ export default function TerminalOverlay({ crName, login = "root", onClose }: Pro
     error:        "text-red-400",
   };
   const statusLabel: Record<Status, string> = {
-    connecting:   "연결 중",
-    connected:    "연결됨",
-    disconnected: "연결 종료",
-    error:        "오류",
+    connecting:   t?.status.connecting   ?? "Connecting",
+    connected:    t?.status.connected    ?? "Connected",
+    disconnected: t?.status.disconnected ?? "Disconnected",
+    error:        t?.status.error        ?? "Error",
   };
 
   return (
@@ -171,12 +285,12 @@ export default function TerminalOverlay({ crName, login = "root", onClose }: Pro
           onClick={onClose}
           style={{ background: "rgba(255,255,255,0.15)" }}
           className="flex items-center justify-center w-7 h-7 rounded text-white hover:brightness-125 transition-all shrink-0"
-          title="닫기"
+          title={t?.close ?? "Close"}
         >
           <span className="text-base leading-none select-none">←</span>
         </button>
         <div className="flex items-center gap-3 flex-1">
-          <span className="text-white/60 text-xs font-mono">콘솔</span>
+          <span className="text-white/60 text-xs font-mono">{t?.title ?? "Console"}</span>
           <span className="text-white text-xs font-mono font-semibold">{crName}</span>
           <span className="text-white/40 text-xs font-mono">@{login}</span>
         </div>
@@ -190,13 +304,13 @@ export default function TerminalOverlay({ crName, login = "root", onClose }: Pro
         {status === "error" && errMsg ? (
           <div className="flex items-center justify-center h-full text-center">
             <div>
-              <p className="text-red-400 text-sm mb-2">연결 실패</p>
+              <p className="text-red-400 text-sm mb-2">{t?.connectionFailed ?? "Connection failed"}</p>
               <p className="text-white/60 text-xs">{errMsg}</p>
               <button
                 onClick={onClose}
                 className="mt-4 px-4 py-1.5 text-xs bg-white/10 hover:bg-white/20 text-white rounded transition-colors"
               >
-                닫기
+                {t?.close ?? "Close"}
               </button>
             </div>
           </div>
