@@ -34,6 +34,7 @@ public class DefaultConfigSeeder implements ApplicationRunner {
         Set<String> existingIamKeys        = toKeySet(configStore.getAll(ConfigCategory.IAM));
         Set<String> existingProvisionKeys  = toKeySet(configStore.getAll(ConfigCategory.PROVISION));
         Set<String> existingSemaphoreKeys  = toKeySet(configStore.getAll(ConfigCategory.SEMAPHORE));
+        Set<String> existingBillingKeys    = toKeySet(configStore.getAll(ConfigCategory.BILLING));
 
         // DB에 없는 키만 씨드하되, 기본값은 환경변수에서 읽어온다.
         // 이미 DB에 값이 있으면 스킵 → UI에서 수정한 값이 항상 우선된다.
@@ -55,6 +56,14 @@ public class DefaultConfigSeeder implements ApplicationRunner {
         seedIfAbsent(existingIamKeys, ConfigCategory.IAM, "zitadel.service-token", "", true,
                 "Zitadel Management API 서비스 계정 토큰");
 
+        seedIfAbsent(existingGeneralKeys, ConfigCategory.GENERAL, "billing.provider", "none", false,
+                "빌링 공급자 (none | lago)");
+
+        seedIfAbsent(existingBillingKeys, ConfigCategory.BILLING, "lago.url", "", false,
+                "Lago API URL (예: https://api.getlago.com)");
+        seedIfAbsent(existingBillingKeys, ConfigCategory.BILLING, "lago.api-key", "", true,
+                "Lago API 키 (Lago UI: Developers → API Keys)");
+
         seedIfAbsent(existingGeneralKeys, ConfigCategory.GENERAL, "banner.message", "", false,
                 "배너 메시지 텍스트");
         seedIfAbsent(existingGeneralKeys, ConfigCategory.GENERAL, "banner.link", "", false,
@@ -75,8 +84,6 @@ public class DefaultConfigSeeder implements ApplicationRunner {
                 "Semaphore 프로젝트에 등록된 Git Repository ID");
         seedIfAbsent(existingSemaphoreKeys, ConfigCategory.SEMAPHORE, "semaphore.playbook", "", false,
                 "실행할 playbook 경로 (예: site.yml)");
-        seedIfAbsent(existingSemaphoreKeys, ConfigCategory.SEMAPHORE, "semaphore.ssh.key.id", "", false,
-                "고정 SSH Key ID (미설정 시 Terraform output의 ssh_private_key로 동적 생성)");
 
         log.info("DefaultConfigSeeder: default config seeding complete.");
 

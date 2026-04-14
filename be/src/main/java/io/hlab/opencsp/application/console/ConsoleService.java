@@ -1,5 +1,6 @@
 package io.hlab.opencsp.application.console;
 
+import io.hlab.opencsp.application.billing.BillingService;
 import io.hlab.opencsp.domain.console.ConsoleSession;
 import io.hlab.opencsp.domain.console.ConsoleSessionRepository;
 import io.hlab.opencsp.domain.provision.Provision;
@@ -9,6 +10,7 @@ import io.hlab.opencsp.infrastructure.teleport.TeleportNodeInfo;
 import io.hlab.opencsp.infrastructure.teleport.tsh.TshCertManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +27,7 @@ public class ConsoleService {
     private final ProvisionRepository provisionRepository;
     private final TeleportClient teleportClient;
     private final TshCertManager tshCertManager;
+    private final BillingService billingService;
 
     /**
      * 콘솔 세션을 생성한다.
@@ -58,15 +61,22 @@ public class ConsoleService {
 
         String teleportSessionId = UUID.randomUUID().toString();
         String effectiveLogin = (login != null && !login.isBlank()) ? login : "root";
+        String iamSessionId = MDC.get("iam_session_id");
 
         ConsoleSession session = ConsoleSession.create(
                 userId, crName, vmHostname,
-                nodeInfo.getId(), effectiveLogin, teleportSessionId
+                nodeInfo.getId(), effectiveLogin, teleportSessionId,
+                iamSessionId
         );
         consoleSessionRepository.save(session);
 
-        log.info("콘솔 세션 생성: sessionId={}, user={}, crName={}, node={}, login={}",
-                session.getSessionId(), userId, crName, vmHostname, effectiveLogin);
+        log.atInfo()
+                .addKeyValue("console_session_id", session.getSessionId())
+                .addKeyValue("user_id", userId)
+                .addKeyValue("cr_name", crName)
+                .addKeyValue("node_hostname", vmHostname)
+                .addKeyValue("ssh_login", effectiveLogin)
+                .log("콘솔 세션 생성");
 
         return new ConsoleSessionDto(
                 session.getSessionId(),
@@ -89,17 +99,33 @@ public class ConsoleService {
     @Transactional
     public void markActive(String sessionId) {
         consoleSessionRepository.findBySessionId(sessionId).ifPresent(s -> {
+            // 방어 로직: PENDING 아니면 상태 변경 안 함 (이미 ACTIVE이거나 FAILED/COMPLETED인 경우)
+            if (s.getStatus() != io.hlab.opencsp.domain.console.ConsoleSessionStatus.PENDING) {
+                return; 
+            }
             s.markActive();
             consoleSessionRepository.save(s);
+            try {
+                billingService.recordConsoleSessionStarted(s.getUserId(), s.getSessionId(), s.getProvisionCrName());
+            } catch (Exception e) {
+                log.atWarn().setCause(e).log("콘솔 세션 과금 기록 실패 (무시)");
+            }
         });
     }
 
     @Transactional
     public void markDisconnected(String sessionId) {
         consoleSessionRepository.findBySessionId(sessionId).ifPresent(s -> {
-            if (s.getStatus() != io.hlab.opencsp.domain.console.ConsoleSessionStatus.FAILED) {
+            if (s.getStatus() == io.hlab.opencsp.domain.console.ConsoleSessionStatus.ACTIVE) {
                 s.markDisconnected();
                 consoleSessionRepository.save(s);
+                try {
+                    billingService.recordConsoleSessionEnded(s);
+                } catch (Exception e) {
+                    log.atWarn().setCause(e).log("콘솔 세션 종료 과금 기록 실패 (무시)");
+                }
+            } else {
+                log.atDebug().addKeyValue("console_session_id", sessionId).log("이미 종료 처리된 세션입니다. 스킵.");
             }
         });
     }

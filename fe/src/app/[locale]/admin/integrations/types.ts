@@ -1,4 +1,4 @@
-export type ConfigCategory = "IAM" | "K8S" | "AI" | "SEMAPHORE" | "PROVISION" | "GENERAL";
+export type ConfigCategory = "IAM" | "K8S" | "AI" | "SEMAPHORE" | "PROVISION" | "BILLING" | "GENERAL";
 export type TabKey = "nodes" | "core" | "console";
 
 export interface ConfigEntry {
@@ -177,6 +177,19 @@ export interface K8sMessages {
   saveFailed: string;
 }
 
+export interface BillingMessages {
+  providerLabel: string;
+  unsaved: string;
+  testBtn: string;
+  testing: string;
+  testPassed: string;
+  testFailed: string;
+  saveBtn: string;
+  saving: string;
+  savedOk: string;
+  unchangedHint: string;
+}
+
 export interface IntegrationsMessages {
   title: string;
   description: string;
@@ -193,5 +206,6 @@ export interface IntegrationsMessages {
   k8s: K8sMessages;
   backend: BackendMessages;
   semaphore: SemaphoreMessages;
+  billing: BillingMessages;
   nodes: NodesMessages;
 }

@@ -10,6 +10,7 @@ import io.hlab.opencsp.domain.provision.ProvisionOutputRepository;
 import io.hlab.opencsp.domain.provision.ProvisionRepository;
 import io.hlab.opencsp.domain.provision.ProvisionStatus;
 import io.hlab.opencsp.domain.provision.SemaphoreStatus;
+import io.hlab.opencsp.application.billing.BillingService;
 import io.hlab.opencsp.infrastructure.k8s.ProvisionRequest;
 import io.hlab.opencsp.infrastructure.k8s.ProvisioningClient;
 import io.hlab.opencsp.infrastructure.semaphore.SemaphoreClient;
@@ -26,6 +27,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +44,7 @@ public class ProvisioningService {
     private final ProvisionOutputRepository provisionOutputRepository;
     private final ProvisionHistoryRepository provisionHistoryRepository;
     private final SemaphoreClient semaphoreClient;
+    private final BillingService billingService;
 
     private static final Map<String, String> DEFAULT_MODULE_PATHS = Map.of(
             "proxmox-vm",      "./bootstrap/terraform/provisions/proxmox-vm",
@@ -71,76 +74,105 @@ public class ProvisioningService {
                 ? sanitizeCrName(requestedCrName)
                 : buildCrName(moduleType, userId);
 
-        // 빈 문자열 var는 Terraform에서 null 체크를 우회할 수 있으므로 제거
-        Map<String, Object> sanitizedVars = new HashMap<>(vars.entrySet().stream()
-                .filter(e -> e.getValue() != null && !e.getValue().toString().isBlank())
-                .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+        MDC.put("cr_name", crName);
+        try {
+            // 빈 문자열 var는 Terraform에서 null 체크를 우회할 수 있으므로 제거
+            Map<String, Object> sanitizedVars = new HashMap<>(vars.entrySet().stream()
+                    .filter(e -> e.getValue() != null && !e.getValue().toString().isBlank())
+                    .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
 
-        // opencsp_ansible_public_key 미제공 시 BE에서 RSA 키 쌍 생성 — private key는 ProvisionOutput에 저장
-        // vm_ssh_public_key는 terraform-secrets(Flux 관리)에서 오는 runner 키이므로 건드리지 않음
-        String generatedPrivateKey = null;
-        if (!sanitizedVars.containsKey("opencsp_ansible_public_key")) {
-            try {
-                SshKeyPair pair = generateSshKeyPair(crName);
-                sanitizedVars.put("opencsp_ansible_public_key", pair.publicKey());
-                generatedPrivateKey = pair.privateKey();
-                log.info("[provision] Ansible SSH 키 쌍 생성: crName={}", crName);
-            } catch (Exception e) {
-                log.warn("[provision] Ansible SSH 키 쌍 생성 실패, 키 없이 진행: crName={}", crName, e);
+            // opencsp_ansible_public_key 미제공 시 BE에서 RSA 키 쌍 생성 — private key는 ProvisionOutput에 저장
+            // vm_ssh_public_key는 terraform-secrets(Flux 관리)에서 오는 runner 키이므로 건드리지 않음
+            String generatedPrivateKey = null;
+            if (!sanitizedVars.containsKey("opencsp_ansible_public_key")) {
+                try {
+                    SshKeyPair pair = generateSshKeyPair(crName);
+                    sanitizedVars.put("opencsp_ansible_public_key", pair.publicKey());
+                    generatedPrivateKey = pair.privateKey();
+                    log.atInfo().log("Ansible SSH 키 쌍 생성");
+                } catch (Exception e) {
+                    log.atWarn().addKeyValue("error", e.getMessage()).setCause(e).log("Ansible SSH 키 쌍 생성 실패, 키 없이 진행");
+                }
             }
+
+            ProvisionRequest request = ProvisionRequest.builder()
+                    .moduleType(moduleType)
+                    .modulePath(modulePath)
+                    .gitRepositoryName(gitRepositoryName)
+                    .userId(userId)
+                    .crName(crName)
+                    .vars(sanitizedVars)
+                    .build();
+
+            provisioningClient.provision(request);
+
+            // DB에 provision 레코드 저장 (vm_id, proxmox_node, vm_name은 vars에서 추출)
+            Long vmId = Optional.ofNullable(sanitizedVars.get("vm_id"))
+                    .map(v -> Long.parseLong(v.toString()))
+                    .orElse(null);
+            String proxmoxNode = Optional.ofNullable(sanitizedVars.get("proxmox_node"))
+                    .map(Object::toString)
+                    .orElse(null);
+            String vmHostname = Optional.ofNullable(sanitizedVars.get("vm_name"))
+                    .map(Object::toString)
+                    .orElse(null);
+            Provision saved = provisionRepository.save(Provision.create(crName, moduleType, fluxNamespace, gitRepositoryName, userId, vmId, proxmoxNode, vmHostname));
+            provisionHistoryRepository.save(ProvisionHistory.created(saved));
+
+            MDC.put("task_id", saved.getProvisionTaskId());
+            log.atInfo()
+                    .addKeyValue("user_id", userId)
+                    .addKeyValue("vm_id", vmId)
+                    .addKeyValue("proxmox_node", proxmoxNode)
+                    .addKeyValue("vm_hostname", vmHostname)
+                    .log("Provision 저장");
+
+            // 생성한 private key를 ProvisionOutput에 sensitive로 저장
+            if (generatedPrivateKey != null) {
+                provisionOutputRepository.save(
+                        ProvisionOutput.of(crName, "vm_ssh_private_key", generatedPrivateKey, "string", true));
+            }
+
+            billingService.recordVmProvisioned(userId, crName, moduleType);
+
+            return crName;
+        } finally {
+            MDC.remove("task_id");
+            MDC.remove("cr_name");
         }
-
-        ProvisionRequest request = ProvisionRequest.builder()
-                .moduleType(moduleType)
-                .modulePath(modulePath)
-                .gitRepositoryName(gitRepositoryName)
-                .userId(userId)
-                .crName(crName)
-                .vars(sanitizedVars)
-                .build();
-
-        provisioningClient.provision(request);
-
-        // DB에 provision 레코드 저장 (vm_id, proxmox_node, vm_name은 vars에서 추출)
-        Long vmId = Optional.ofNullable(sanitizedVars.get("vm_id"))
-                .map(v -> Long.parseLong(v.toString()))
-                .orElse(null);
-        String proxmoxNode = Optional.ofNullable(sanitizedVars.get("proxmox_node"))
-                .map(Object::toString)
-                .orElse(null);
-        String vmHostname = Optional.ofNullable(sanitizedVars.get("vm_name"))
-                .map(Object::toString)
-                .orElse(null);
-        Provision saved = provisionRepository.save(Provision.create(crName, moduleType, fluxNamespace, gitRepositoryName, userId, vmId, proxmoxNode, vmHostname));
-        provisionHistoryRepository.save(ProvisionHistory.created(saved));
-        log.info("[taskId={}] Provision 저장: crName={}, userId={}, vmId={}, proxmoxNode={}, vmHostname={}",
-                saved.getProvisionTaskId(), crName, userId, vmId, proxmoxNode, vmHostname);
-
-        // 생성한 private key를 ProvisionOutput에 sensitive로 저장
-        if (generatedPrivateKey != null) {
-            provisionOutputRepository.save(
-                    ProvisionOutput.of(crName, "vm_ssh_private_key", generatedPrivateKey, "string", true));
-        }
-
-        return crName;
     }
 
     @Transactional
     public void destroy(String crName) {
+        MDC.put("cr_name", crName);
         try {
-            provisioningClient.destroy(crName);
-        } catch (Exception e) {
-            // CR이 k8s에 존재하지 않는 경우 (provision 실패로 미생성 등) — DB만 정리
-            log.warn("CR 삭제 실패 (k8s에 없을 수 있음): crName={}, error={}", crName, e.getMessage());
-            provisionRepository.findByCrName(crName).ifPresent(p -> handleDestroyed(p, e.getMessage()));
-            return;
+            try {
+                provisioningClient.destroy(crName);
+            } catch (Exception e) {
+                // CR이 k8s에 존재하지 않는 경우 (provision 실패로 미생성 등) — DB만 정리
+                log.atWarn()
+                        .addKeyValue("error", e.getMessage())
+                        .log("CR 삭제 실패, k8s에 없을 수 있음");
+                Optional<Provision> opt = provisionRepository.findByCrName(crName);
+                if (opt.isPresent()) {
+                    MDC.put("task_id", opt.get().getProvisionTaskId());
+                    handleDestroyed(opt.get(), e.getMessage());
+                }
+                return;
+            }
+            Optional<Provision> opt = provisionRepository.findByCrName(crName);
+            if (opt.isPresent()) {
+                Provision p = opt.get();
+                MDC.put("task_id", p.getProvisionTaskId());
+                ProvisionStatus prev = p.getStatus();
+                p.updateStatus(ProvisionStatus.DESTROYING);
+                provisionRepository.save(p);
+                provisionHistoryRepository.save(ProvisionHistory.statusChanged(p, prev, ProvisionStatus.DESTROYING));
+            }
+        } finally {
+            MDC.remove("task_id");
+            MDC.remove("cr_name");
         }
-        provisionRepository.findByCrName(crName).ifPresent(p -> {
-            ProvisionStatus prev = p.getStatus();
-            p.updateStatus(ProvisionStatus.DESTROYING);
-            provisionRepository.save(p);
-            provisionHistoryRepository.save(ProvisionHistory.statusChanged(p, prev, ProvisionStatus.DESTROYING));
-        });
     }
 
     public Map<String, Object> getStatus(String crName) {
@@ -167,7 +199,7 @@ public class ProvisioningService {
         try {
             liveStatuses = provisioningClient.listAllStatus(fluxNamespace);
         } catch (Exception e) {
-            log.warn("k8s 상태 조회 실패, DB 상태만 반환: {}", e.getMessage());
+            log.atWarn().addKeyValue("error", e.getMessage()).log("k8s 상태 조회 실패, DB 상태만 반환");
             liveStatuses = Map.of();
         }
 
@@ -189,7 +221,7 @@ public class ProvisioningService {
         try {
             liveStatuses = provisioningClient.listAllStatus(fluxNamespace);
         } catch (Exception e) {
-            log.warn("k8s 상태 조회 실패, DB 상태만 반환: {}", e.getMessage());
+            log.atWarn().addKeyValue("error", e.getMessage()).log("k8s 상태 조회 실패, DB 상태만 반환");
             liveStatuses = Map.of();
         }
 
@@ -214,7 +246,7 @@ public class ProvisioningService {
         try {
             crMetas = provisioningClient.listAllCrMeta(fluxNamespace);
         } catch (Exception e) {
-            log.error("[ClusterSync] k8s CR 목록 조회 실패: {}", e.getMessage(), e);
+            log.atError().addKeyValue("error", e.getMessage()).setCause(e).log("ClusterSync k8s CR 목록 조회 실패");
             throw new RuntimeException("클러스터 CR 조회 실패: " + e.getMessage(), e);
         }
 
@@ -230,20 +262,47 @@ public class ProvisioningService {
                 skipped++;
                 continue;
             }
-            ProvisionStatus initialStatus = resolveStatus(cr.statusMap());
-            Provision newProvision = Provision.create(
-                            cr.crName(), cr.moduleType(), fluxNamespace,
-                            cr.gitRepositoryName(), cr.userId(),
-                            null, null, null
-                    );
-            newProvision.updateStatus(initialStatus);
-            provisionRepository.save(newProvision);
-            log.info("[ClusterSync] CR 임포트: crName={}, userId={}, moduleType={}, status={}",
-                    cr.crName(), cr.userId(), cr.moduleType(), initialStatus);
-            created++;
+            MDC.put("cr_name", cr.crName());
+            try {
+                ProvisionStatus initialStatus = resolveStatus(cr.statusMap());
+                Provision newProvision = Provision.create(
+                                cr.crName(), cr.moduleType(), fluxNamespace,
+                                cr.gitRepositoryName(), cr.userId(),
+                                null, null, null
+                        );
+                newProvision.updateStatus(initialStatus);
+                provisionRepository.save(newProvision);
+                log.atInfo()
+                        .addKeyValue("user_id", cr.userId())
+                        .addKeyValue("module_type", cr.moduleType())
+                        .addKeyValue("status", initialStatus)
+                        .log("ClusterSync CR 임포트");
+
+                // APPLIED 상태면 outputs 복원 및 Semaphore 재트리거 (DB 유실 복구)
+                if (initialStatus == ProvisionStatus.APPLIED) {
+                    MDC.put("task_id", newProvision.getProvisionTaskId());
+                    try {
+                        onApplied(newProvision);
+                    } catch (Exception e) {
+                        log.atWarn()
+                                .addKeyValue("error", e.getMessage())
+                                .log("ClusterSync APPLIED outputs 복원 실패, 무시");
+                    } finally {
+                        MDC.remove("task_id");
+                    }
+                }
+
+                created++;
+            } finally {
+                MDC.remove("cr_name");
+            }
         }
 
-        log.info("[ClusterSync] 완료: total={}, imported={}, skipped={}", crMetas.size(), created, skipped);
+        log.atInfo()
+                .addKeyValue("total", crMetas.size())
+                .addKeyValue("imported", created)
+                .addKeyValue("skipped", skipped)
+                .log("ClusterSync 완료");
         return new SyncResult(crMetas.size(), created, skipped);
     }
 
@@ -267,11 +326,13 @@ public class ProvisioningService {
         try {
             liveStatuses = provisioningClient.listAllStatus(fluxNamespace);
         } catch (Exception e) {
-            log.warn("k8s 일괄 상태 조회 실패, syncStatus 스킵: {}", e.getMessage());
+            log.atWarn().addKeyValue("error", e.getMessage()).log("k8s 일괄 상태 조회 실패, syncStatus 스킵");
             return;
         }
 
         for (Provision provision : active) {
+            MDC.put("task_id", provision.getProvisionTaskId());
+            MDC.put("cr_name", provision.getCrName());
             try {
                 Map<String, Object> status = liveStatuses.get(provision.getCrName());
 
@@ -284,7 +345,9 @@ public class ProvisioningService {
                         // CR이 아직 존재 — stuck 여부 확인
                         Duration stuck = Duration.between(provision.getUpdatedAt(), LocalDateTime.now());
                         if (stuck.toMinutes() >= destroyTimeoutMinutes) {
-                            log.warn("Destroy timeout({}m) 초과, finalizer 강제 제거: crName={}", destroyTimeoutMinutes, provision.getCrName());
+                            log.atWarn()
+                                    .addKeyValue("timeout_minutes", destroyTimeoutMinutes)
+                                    .log("Destroy timeout 초과, finalizer 강제 제거");
                             provisioningClient.forceDelete(provision.getCrName());
                         }
                         next = ProvisionStatus.DESTROYING;
@@ -295,8 +358,10 @@ public class ProvisioningService {
 
                 if (next != provision.getStatus()) {
                     ProvisionStatus prev = provision.getStatus();
-                    log.info("[taskId={}] Provision 상태 동기화: crName={}, {} → {}",
-                            provision.getProvisionTaskId(), provision.getCrName(), prev, next);
+                    log.atInfo()
+                            .addKeyValue("status_prev", prev)
+                            .addKeyValue("status_next", next)
+                            .log("Provision 상태 동기화");
 
                     if (next == ProvisionStatus.DESTROYED) {
                         handleDestroyed(provision, null);
@@ -311,7 +376,12 @@ public class ProvisioningService {
                     }
                 }
             } catch (Exception e) {
-                log.warn("상태 동기화 실패 (무시): crName={}, error={}", provision.getCrName(), e.getMessage());
+                log.atWarn()
+                        .addKeyValue("error", e.getMessage())
+                        .log("상태 동기화 실패, 무시");
+            } finally {
+                MDC.remove("task_id");
+                MDC.remove("cr_name");
             }
         }
 
@@ -329,6 +399,8 @@ public class ProvisioningService {
         List<Provision> running = provisionRepository.findBySemaphoreStatus(SemaphoreStatus.RUNNING);
         for (Provision provision : running) {
             if (provision.getSemaphoreTaskId() == null) continue;
+            MDC.put("task_id", provision.getProvisionTaskId());
+            MDC.put("cr_name", provision.getCrName());
             try {
                 SemaphoreClient.TaskResult result = semaphoreClient.getTaskResult(provision.getSemaphoreTaskId());
                 SemaphoreStatus next = switch (result.status()) {
@@ -339,18 +411,26 @@ public class ProvisioningService {
                 if (next != SemaphoreStatus.RUNNING) {
                     provision.updateSemaphoreStatus(next);
                     provisionRepository.save(provision);
-                    log.info("[taskId={}] Semaphore 완료: crName={}, semaphoreTaskId={}, semaphoreStatus={}",
-                            provision.getProvisionTaskId(), provision.getCrName(), provision.getSemaphoreTaskId(), next);
+                    log.atInfo()
+                            .addKeyValue("semaphore_task_id", provision.getSemaphoreTaskId())
+                            .addKeyValue("semaphore_status", next)
+                            .log("Semaphore 완료");
                 }
             } catch (Exception e) {
-                log.warn("[taskId={}] Semaphore 상태 폴링 실패 (무시): crName={}, semaphoreTaskId={}, error={}",
-                        provision.getProvisionTaskId(), provision.getCrName(), provision.getSemaphoreTaskId(), e.getMessage());
+                log.atWarn()
+                        .addKeyValue("semaphore_task_id", provision.getSemaphoreTaskId())
+                        .addKeyValue("error", e.getMessage())
+                        .log("Semaphore 상태 폴링 실패, 무시");
+            } finally {
+                MDC.remove("task_id");
+                MDC.remove("cr_name");
             }
         }
     }
 
     /**
      * Terraform apply 완료 시 훅 — outputs를 DB에 저장하고 Semaphore post-provisioning을 트리거한다.
+     * syncStatus() 루프 안에서 호출되므로 MDC(task_id, cr_name)는 호출자가 이미 설정한다.
      */
     @Transactional
     protected void onApplied(Provision provision) {
@@ -358,20 +438,24 @@ public class ProvisioningService {
 
         // 이미 Semaphore 리소스가 생성된 경우 중복 트리거 방지
         if (provision.getSemaphoreTaskId() != null) {
-            log.info("[taskId={}][onApplied] Semaphore 이미 실행됨, 스킵: crName={}, semaphoreTaskId={}",
-                    provision.getProvisionTaskId(), crName, provision.getSemaphoreTaskId());
+            log.atInfo()
+                    .addKeyValue("semaphore_task_id", provision.getSemaphoreTaskId())
+                    .log("Semaphore 이미 실행됨, 스킵");
             return;
         }
 
-        log.info("[taskId={}] Terraform apply 완료: crName={}, moduleType={}",
-                provision.getProvisionTaskId(), crName, provision.getModuleType());
+        log.atInfo()
+                .addKeyValue("module_type", provision.getModuleType())
+                .log("Terraform apply 완료");
 
         // 1. tofu-controller CR에서 Terraform outputs 조회
         Map<String, ProvisioningClient.OutputEntry> outputs;
         try {
             outputs = provisioningClient.getOutputs(crName);
         } catch (Exception e) {
-            log.warn("[onApplied] outputs 조회 실패, post-provisioning 스킵: crName={}, error={}", crName, e.getMessage());
+            log.atWarn()
+                    .addKeyValue("error", e.getMessage())
+                    .log("outputs 조회 실패, post-provisioning 스킵");
             return;
         }
 
@@ -383,7 +467,8 @@ public class ProvisioningService {
                 .orElse(null);
 
         if (outputs.isEmpty()) {
-            log.warn("[onApplied] Terraform outputs 없음 — Terraform 모듈에 output 블록이 정의되어 있는지 확인하세요: crName={}", crName);
+            log.atWarn()
+                    .log("Terraform outputs 없음, output 블록이 정의되어 있는지 확인하세요");
         } else {
             provisionOutputRepository.deleteByCrName(crName);
             List<ProvisionOutput> records = outputs.entrySet().stream()
@@ -399,7 +484,10 @@ public class ProvisioningService {
                 records.add(ProvisionOutput.of(crName, "vm_ssh_private_key", savedPrivateKey, "string", true));
             }
             provisionOutputRepository.saveAll(records);
-            log.info("[onApplied] outputs {}개 저장: crName={}, keys={}", records.size(), crName, outputs.keySet());
+            log.atInfo()
+                    .addKeyValue("output_count", records.size())
+                    .addKeyValue("output_keys", outputs.keySet())
+                    .log("outputs 저장");
         }
 
         // 3. vm_hostname output이 있으면 Provision 엔티티에도 반영
@@ -413,7 +501,7 @@ public class ProvisioningService {
 
         // 4. Semaphore post-provisioning 트리거 (설정된 경우에만)
         if (!semaphoreClient.isConfigured()) {
-            log.info("[onApplied] Semaphore 미설정 — post-provisioning 스킵: crName={}", crName);
+            log.atInfo().log("Semaphore 미설정, post-provisioning 스킵");
             return;
         }
         Map<String, String> outputsAsStrings = new HashMap<>(outputs.entrySet().stream()
@@ -428,11 +516,18 @@ public class ProvisioningService {
             SemaphoreClient.PostProvisionResult result = semaphoreClient.triggerPostProvisionJob(crName, outputsAsStrings);
             provision.assignSemaphoreIds(result.sshKeyId(), result.inventoryId(), result.templateId(), result.taskId(), result.environmentId());
             provisionRepository.save(provision);
-            log.info("[taskId={}][onApplied] Semaphore Task 실행됨: crName={}, semaphoreTaskId={}, sshKeyId={}, inventoryId={}, templateId={}, environmentId={}",
-                    provision.getProvisionTaskId(), crName, result.taskId(), result.sshKeyId(), result.inventoryId(), result.templateId(), result.environmentId());
+            log.atInfo()
+                    .addKeyValue("semaphore_task_id", result.taskId())
+                    .addKeyValue("semaphore_ssh_key_id", result.sshKeyId())
+                    .addKeyValue("semaphore_inventory_id", result.inventoryId())
+                    .addKeyValue("semaphore_template_id", result.templateId())
+                    .addKeyValue("semaphore_environment_id", result.environmentId())
+                    .log("Semaphore Task 실행됨");
         } catch (Exception e) {
-            log.error("[taskId={}][onApplied] Semaphore 트리거 실패 (프로비저닝은 완료): crName={}, error={}",
-                    provision.getProvisionTaskId(), crName, e.getMessage(), e);
+            log.atError()
+                    .addKeyValue("error", e.getMessage())
+                    .setCause(e)
+                    .log("Semaphore 트리거 실패, 프로비저닝은 완료");
         }
     }
 
@@ -442,6 +537,8 @@ public class ProvisioningService {
 
     /**
      * DESTROYED 상태 처리: Semaphore 리소스 정리 → 히스토리 저장 → DB에서 삭제.
+     * syncStatus() 루프 또는 destroy()에서 호출되므로 MDC(task_id, cr_name)는 호출자가 설정한다.
+     *
      * @param detail 오류 메시지 등 부가 정보 (없으면 null)
      */
     @Transactional
@@ -454,11 +551,15 @@ public class ProvisioningService {
                 int sshKeyId = provision.getSemaphoreSshKeyId() != null ? provision.getSemaphoreSshKeyId() : -1;
                 int environmentId = provision.getSemaphoreEnvironmentId() != null ? provision.getSemaphoreEnvironmentId() : -1;
                 semaphoreClient.cleanupPostProvision(sshKeyId, provision.getSemaphoreTemplateId(), provision.getSemaphoreInventoryId(), environmentId);
-                log.info("[handleDestroyed] Semaphore 리소스 정리 완료: crName={}, sshKeyId={}, templateId={}, inventoryId={}",
-                        provision.getCrName(), sshKeyId, provision.getSemaphoreTemplateId(), provision.getSemaphoreInventoryId());
+                log.atInfo()
+                        .addKeyValue("semaphore_ssh_key_id", sshKeyId)
+                        .addKeyValue("semaphore_template_id", provision.getSemaphoreTemplateId())
+                        .addKeyValue("semaphore_inventory_id", provision.getSemaphoreInventoryId())
+                        .log("Semaphore 리소스 정리 완료");
             } catch (Exception e) {
-                log.warn("[handleDestroyed] Semaphore 리소스 정리 실패 (무시): crName={}, error={}",
-                        provision.getCrName(), e.getMessage());
+                log.atWarn()
+                        .addKeyValue("error", e.getMessage())
+                        .log("Semaphore 리소스 정리 실패, 무시");
             }
         }
 
@@ -466,14 +567,24 @@ public class ProvisioningService {
         try {
             provisioningClient.deleteTfStateSecret(provision.getCrName());
         } catch (Exception e) {
-            log.warn("[handleDestroyed] tfstate Secret 삭제 실패 (무시): crName={}, error={}", provision.getCrName(), e.getMessage());
+            log.atWarn()
+                    .addKeyValue("error", e.getMessage())
+                    .log("tfstate Secret 삭제 실패, 무시");
         }
 
         ProvisionStatus prev = provision.getStatus();
         provisionHistoryRepository.save(ProvisionHistory.statusChanged(provision, prev, ProvisionStatus.DESTROYED, detail));
         provisionOutputRepository.deleteByCrName(provision.getCrName());
         provisionRepository.deleteByCrName(provision.getCrName());
-        log.info("Provision 삭제 완료 (DESTROYED): crName={}, prevStatus={}", provision.getCrName(), prev);
+        log.atInfo()
+                .addKeyValue("status_prev", prev)
+                .log("Provision 삭제 완료 (DESTROYED)");
+
+        try {
+            billingService.recordVmDestroyed(provision);
+        } catch (Exception e) {
+            log.atWarn().setCause(e).log("VM 파기 과금 기록 실패 (무시)");
+        }
     }
 
     /**

@@ -1,0 +1,8 @@
+node_modules/.cache/
+node_modules/.vite/
+.next/
+build/
+dist/
+*.lock
+*.min.js
+*.map

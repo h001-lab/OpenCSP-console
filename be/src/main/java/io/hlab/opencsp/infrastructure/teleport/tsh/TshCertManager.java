@@ -52,7 +52,10 @@ public class TshCertManager {
         }
         // 인증서 파일이 이미 존재하면 수동 login으로 얻은 것으로 간주
         if (privateKeyPath().toFile().exists() && sshCertPath().toFile().exists()) {
-            log.info("[tsh] 기존 인증서 파일 사용: key={}, cert={}", privateKeyPath(), sshCertPath());
+            log.atInfo()
+                    .addKeyValue("key_path", privateKeyPath().toString())
+                    .addKeyValue("cert_path", sshCertPath().toString())
+                    .log("기존 인증서 파일 사용");
             certExpiry.set(Instant.now().plusSeconds(3600));
             return;
         }
@@ -150,10 +153,10 @@ public class TshCertManager {
                     }
                 }
             }
-            log.warn("[tsh] 노드를 찾을 수 없음: hostname={}", hostname);
+            log.atWarn().addKeyValue("hostname", hostname).log("노드를 찾을 수 없음");
             return Optional.empty();
         } catch (Exception e) {
-            log.error("[tsh] 노드 조회 실패: hostname={}", hostname, e);
+            log.atError().addKeyValue("hostname", hostname).setCause(e).log("노드 조회 실패");
             return Optional.empty();
         }
     }
@@ -175,7 +178,11 @@ public class TshCertManager {
         // 프록시 주소에서 프로토콜 제거
         String proxyAddr = proxyUrl.replaceFirst("^https?://", "");
 
-        log.info("[tsh] tsh login 실행: proxy={}, user={}, ttl={}", proxyAddr, user, ttl);
+        log.atInfo()
+                .addKeyValue("proxy_addr", proxyAddr)
+                .addKeyValue("tsh_user", user)
+                .addKeyValue("tsh_ttl", ttl)
+                .log("tsh login 실행");
         try {
             ProcessBuilder pb = new ProcessBuilder(
                     tshPath, "login",
@@ -196,7 +203,7 @@ public class TshCertManager {
                 throw new IllegalStateException("tsh login 실패 (exitCode=" + exitCode + "): " + output);
             }
 
-            log.info("[tsh] tsh login 완료");
+            log.atInfo().log("tsh login 완료");
             certExpiry.set(Instant.now().plusSeconds(parseTtlToSeconds(ttl)));
 
         } catch (IllegalStateException e) {

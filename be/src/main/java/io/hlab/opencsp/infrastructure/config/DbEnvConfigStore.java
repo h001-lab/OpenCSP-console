@@ -117,6 +117,7 @@ public class DbEnvConfigStore implements ConfigStore {
             case AI        -> "spring.ai." + key;       // e.g. spring.ai.openai.api-key
             case SEMAPHORE -> "semaphore." + key;
             case PROVISION -> "app.provision." + key;   // e.g. app.provision.history-retention-days
+            case BILLING   -> "billing." + key;          // e.g. billing.lago.url
             case GENERAL   -> "app." + key;
         };
     }

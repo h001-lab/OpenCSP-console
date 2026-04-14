@@ -56,6 +56,14 @@ public class ConsoleSession {
     @Column(name = "teleport_session_id", length = 36)
     private String teleportSessionId;
 
+    /**
+     * 세션 생성 HTTP 요청의 IAM session_id (JWT jti 또는 UUID 폴백).
+     * WebSocket 핸드셰이크는 Bearer 헤더를 전달할 수 없어 MdcContextFilter가 동작하지 않으므로,
+     * HTTP 요청 시점의 session_id를 저장해 두고 WebSocket 핸들러에서 복원한다.
+     */
+    @Column(name = "iam_session_id", length = 255)
+    private String iamSessionId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private ConsoleSessionStatus status;
@@ -77,7 +85,8 @@ public class ConsoleSession {
 
     public static ConsoleSession create(String userId, String provisionCrName,
                                         String nodeHostname, String teleportNodeId,
-                                        String teleportLogin, String teleportSessionId) {
+                                        String teleportLogin, String teleportSessionId,
+                                        String iamSessionId) {
         return ConsoleSession.builder()
                 .userId(userId)
                 .provisionCrName(provisionCrName)
@@ -85,6 +94,7 @@ public class ConsoleSession {
                 .teleportNodeId(teleportNodeId)
                 .teleportLogin(teleportLogin)
                 .teleportSessionId(teleportSessionId)
+                .iamSessionId(iamSessionId)
                 .status(ConsoleSessionStatus.PENDING)
                 .build();
     }

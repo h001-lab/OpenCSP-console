@@ -6,7 +6,59 @@
     }
   },
   "Nav": {
-    "title": "OpenCSP Console"
+    "title": "OpenCSP Console",
+    "menuOpen": "Open menu"
+  },
+  "LoginButton": {
+    "loading": "Loading...",
+    "setupIntegrations": "Setup Integrations",
+    "dashboard": "Dashboard",
+    "billing": "Billing",
+    "settings": "Settings",
+    "admin": "Admin",
+    "logout": "Logout",
+    "signIn": "Sign In"
+  },
+  "ServiceSearch": {
+    "title": "All Services",
+    "placeholder": "Search services...",
+    "notFound": "No services found",
+    "categories": {
+      "Compute": "Compute",
+      "Network": "Network",
+      "Storage": "Storage",
+      "IAM": "IAM",
+      "Monitoring": "Monitoring",
+      "Billing": "Billing"
+    },
+    "services": {
+      "Instances": "Instances",
+      "Network": "Network",
+      "Firewall": "Firewall",
+      "Volumes": "Volumes",
+      "Backups": "Backups",
+      "IAM": "IAM",
+      "Monitoring": "Monitoring",
+      "Billing": "Billing"
+    }
+  },
+  "Console": {
+    "status": {
+      "connecting": "Connecting",
+      "connected": "Connected",
+      "disconnected": "Disconnected",
+      "error": "Error"
+    },
+    "close": "Close",
+    "title": "Console",
+    "connectionFailed": "Connection failed",
+    "sessionCreateFailed": "Session creation failed",
+    "sessionIdMissing": "Failed to receive session ID",
+    "connectingMsg": "Connecting to console...",
+    "connectedMsg": "Connected",
+    "disconnectedMsg": "Connection closed",
+    "wsError": "WebSocket connection error",
+    "wsErrorMsg": "Connection error"
   },
   "Home": {
     "sidebar": [
@@ -17,7 +69,7 @@
     ],
     "hero": {
       "title": "Welcome to OpenCSP Console",
-      "description": "Your open-source cloud platform powered by Proxmox and cloud-native tools. Build and manage your own CSP infrastructure from one place."
+      "description": "An open-source cloud service platform powered by IaaS and cloud-native tools. Build your own multi-cloud service without vendor lock-in."
     },
     "news": {
       "title": "Latest News",
@@ -186,6 +238,7 @@
         "AI": "OpenAI-compatible models (incl. Gemini), Vertex AI settings",
         "SEMAPHORE": "Ansible Semaphore post-provisioning automation",
         "PROVISION": "Provisioning behavior settings (history retention, etc.)",
+        "BILLING": "Billing provider integration (Lago, etc.)",
         "GENERAL": "General app settings"
       },
       "iam": {
@@ -289,6 +342,18 @@
             "placeholder": "Join token"
           }
         ]
+      },
+      "billing": {
+        "providerLabel": "Billing Provider",
+        "unsaved": "Unsaved",
+        "testBtn": "Test Connection",
+        "testing": "Testing...",
+        "testPassed": "Test passed",
+        "testFailed": "Test failed",
+        "saveBtn": "Save",
+        "saving": "Saving...",
+        "savedOk": "Saved successfully",
+        "unchangedHint": "Unchanged (leave blank to keep current value)"
       },
       "nodes": {
         "sectionTitle": "Nodes",
@@ -475,10 +540,10 @@
           "cancel": "Cancel"
         },
         "categories": [
-          "공지",
-          "업데이트",
-          "점검",
-          "보안"
+          "Notice",
+          "Update",
+          "Maintenance",
+          "Security"
         ]
       },
       "banner": {
@@ -514,14 +579,16 @@
     ],
     "description": "View your resource usage and billing history.",
     "summary": {
-      "title": "This Month's Usage",
-      "cpu": "CPU",
-      "storage": "Storage",
-      "network": "Network",
+      "title": "Usage Overview",
+      "provisions": "Total Provisions",
+      "activeProvisions": "Active VMs",
+      "consoleSessions": "Console Sessions",
+      "consoleMinutes": "Console Time",
       "unit": {
-        "cpu": "core·h",
-        "storage": "GB",
-        "network": "GB"
+        "provisions": "total",
+        "activeProvisions": "running",
+        "consoleSessions": "sessions",
+        "consoleMinutes": "min"
       }
     },
     "history": {
@@ -665,6 +732,11 @@
     },
     "detail": {
       "backToList": "← Back to list",
+      "tabs": {
+        "overview": "Overview",
+        "ansible": "Ansible",
+        "ssh": "SSH Access"
+      },
       "fields": {
         "vmId": "VM ID",
         "crName": "CR Name",
@@ -673,15 +745,42 @@
         "userId": "User ID",
         "status": "Status",
         "createdAt": "Created",
-        "updatedAt": "Updated"
+        "updatedAt": "Updated",
+        "semaphoreStatus": "Ansible Status",
+        "semaphoreTaskId": "Ansible Task"
       },
       "actions": {
-        "console": "Console",
+        "console": "Connect",
         "edit": "Edit",
         "stop": "Stop",
-        "delete": "Delete",
-        "semaphore": "Semaphore Log",
-        "semaphoreNoOutput": "No output available"
+        "delete": "Delete"
+      },
+      "console": {
+        "title": "Connect to Console",
+        "selectAccount": "Login account",
+        "connect": "Connect",
+        "cancel": "Cancel",
+        "installNote": "Run once to install tsh and configure SSH:",
+        "connectNote": "Then connect via web console:",
+        "webConsoleNote": "The web console connects through Teleport (tsh). Run the install command above first if tsh is not yet installed on your machine."
+      },
+      "ansible": {
+        "taskId": "Task",
+        "refresh": "Refresh",
+        "noOutput": "No output available",
+        "notTriggered": "Ansible has not been triggered for this instance."
+      },
+      "ssh": {
+        "user": "User",
+        "readyNote": "Instance must be in APPLIED state with a hostname to view SSH info.",
+        "installNote": "Run once to install tsh and configure SSH:",
+        "connectNote": "Then connect:",
+        "showScript": "Show script",
+        "hideScript": "Hide script",
+        "fullScript": "Full script",
+        "copyScript": "Copy script",
+        "copied": "✓ Copied",
+        "scriptFetchError": "Failed to load script."
       },
       "notReady": "This feature is not ready yet.",
       "deleteFailed": "Delete failed",

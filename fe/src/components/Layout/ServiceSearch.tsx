@@ -1,8 +1,23 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Link } from "@/providers/MessagesProvider";
+import { Link, useMsg } from "@/providers/MessagesProvider";
 import { ROUTES } from "@/lib/routes";
+
+interface ServiceSearchMessages {
+  title: string;
+  placeholder: string;
+  notFound: string;
+  categories: Record<string, string>;
+  services: Record<string, string>;
+}
+
+interface ServiceDef {
+  key: string;
+  path: string;
+  categoryKey: string;
+  icon: React.ReactNode;
+}
 
 interface Service {
   label: string;
@@ -11,12 +26,11 @@ interface Service {
   icon: React.ReactNode;
 }
 
-const ALL_SERVICES: Service[] = [
-  // Compute
+const SERVICE_DEFS: ServiceDef[] = [
   {
-    label: "Instances",
+    key: "Instances",
     path: ROUTES.instances,
-    category: "Compute",
+    categoryKey: "Compute",
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
@@ -24,11 +38,10 @@ const ALL_SERVICES: Service[] = [
       </svg>
     ),
   },
-  // Network
   {
-    label: "Network",
+    key: "Network",
     path: ROUTES.network,
-    category: "Network",
+    categoryKey: "Network",
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
@@ -37,9 +50,9 @@ const ALL_SERVICES: Service[] = [
     ),
   },
   {
-    label: "Firewall",
+    key: "Firewall",
     path: ROUTES.firewall,
-    category: "Network",
+    categoryKey: "Network",
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
@@ -47,11 +60,10 @@ const ALL_SERVICES: Service[] = [
       </svg>
     ),
   },
-  // Storage
   {
-    label: "Volumes",
+    key: "Volumes",
     path: ROUTES.volumes,
-    category: "Storage",
+    categoryKey: "Storage",
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
@@ -60,9 +72,9 @@ const ALL_SERVICES: Service[] = [
     ),
   },
   {
-    label: "Backups",
+    key: "Backups",
     path: ROUTES.backups,
-    category: "Storage",
+    categoryKey: "Storage",
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
@@ -70,11 +82,10 @@ const ALL_SERVICES: Service[] = [
       </svg>
     ),
   },
-  // IAM
   {
-    label: "IAM",
+    key: "IAM",
     path: ROUTES.iam,
-    category: "IAM",
+    categoryKey: "IAM",
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
@@ -82,11 +93,10 @@ const ALL_SERVICES: Service[] = [
       </svg>
     ),
   },
-  // Monitoring
   {
-    label: "Monitoring",
+    key: "Monitoring",
     path: ROUTES.monitoring,
-    category: "Monitoring",
+    categoryKey: "Monitoring",
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
@@ -94,11 +104,10 @@ const ALL_SERVICES: Service[] = [
       </svg>
     ),
   },
-  // Billing
   {
-    label: "Billing",
+    key: "Billing",
     path: ROUTES.billing,
-    category: "Billing",
+    categoryKey: "Billing",
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
@@ -113,6 +122,7 @@ export function ServiceSearch() {
   const [query, setQuery] = useState("");
   const ref = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const t = useMsg("ServiceSearch") as unknown as ServiceSearchMessages | undefined;
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -129,13 +139,20 @@ export function ServiceSearch() {
     if (open) setTimeout(() => inputRef.current?.focus(), 50);
   }, [open]);
 
+  const allServices: Service[] = (t ? SERVICE_DEFS.map((def) => ({
+    label: t.services[def.key] ?? def.key,
+    path: def.path,
+    category: t.categories[def.categoryKey] ?? def.categoryKey,
+    icon: def.icon,
+  })) : []);
+
   const filtered = query.trim()
-    ? ALL_SERVICES.filter(
+    ? allServices.filter(
         (s) =>
           s.label.toLowerCase().includes(query.toLowerCase()) ||
           s.category.toLowerCase().includes(query.toLowerCase())
       )
-    : ALL_SERVICES;
+    : allServices;
 
   const byCategory = filtered.reduce<Record<string, Service[]>>((acc, s) => {
     if (!acc[s.category]) acc[s.category] = [];
@@ -150,7 +167,7 @@ export function ServiceSearch() {
         className={`p-1.5 rounded transition-colors ${
           open ? "bg-gray-200 text-gray-700" : "hover:bg-gray-100 text-gray-500"
         }`}
-        title="All Services"
+        title={t?.title ?? "All Services"}
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
@@ -165,7 +182,7 @@ export function ServiceSearch() {
             <input
               ref={inputRef}
               type="text"
-              placeholder="Search services..."
+              placeholder={t?.placeholder ?? "Search services..."}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-sm focus:outline-none focus:ring-2 focus:ring-gray-300 bg-gray-50"
@@ -176,7 +193,7 @@ export function ServiceSearch() {
           </div>
 
           {Object.keys(byCategory).length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-3">No services found</p>
+            <p className="text-sm text-gray-400 text-center py-3">{t?.notFound ?? "No services found"}</p>
           ) : (
             <div className="space-y-4">
               {Object.entries(byCategory).map(([category, services]) => (

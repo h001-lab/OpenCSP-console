@@ -61,25 +61,25 @@ public class SemaphoreHttpClient implements SemaphoreClient {
 
         WebClient wc = buildWebClient(baseUrl, token);
 
-        // 1. SSH 키 — Terraform output의 private key 우선 (키 이름 후보 순서대로 시도), 없으면 정적 config fallback
-        String privateKey = outputs.getOrDefault("ssh_private_key",
-                            outputs.getOrDefault("vm_ssh_private_key", null));
-        int sshKeyId;
-        boolean dynamicKey;
-        if (privateKey != null && !privateKey.isBlank()) {
-            sshKeyId   = createSshKey(wc, projectId, crName, privateKey);
-            dynamicKey = true;
-            log.info("[Semaphore] SSH 키 등록 (동적): crName={}, sshKeyId={}", crName, sshKeyId);
-        } else {
-            sshKeyId   = requireInt("semaphore.ssh.key.id");
-            dynamicKey = false;
-            log.info("[Semaphore] SSH 키 사용 (정적 config): crName={}, sshKeyId={}", crName, sshKeyId);
+        // 1. SSH 키 — BE가 인스턴스 생성 시 생성한 private key를 outputs에서 읽어 Semaphore에 등록
+        String privateKey = outputs.getOrDefault("vm_ssh_private_key",
+                            outputs.getOrDefault("ssh_private_key", null));
+        if (privateKey == null || privateKey.isBlank()) {
+            throw new IllegalStateException("outputs에 SSH private key(vm_ssh_private_key)가 없습니다: crName=" + crName);
         }
+        int sshKeyId = createSshKey(wc, projectId, crName, privateKey);
+        log.atInfo()
+                // .addKeyValue("cr_name", crName)
+                .addKeyValue("semaphore_ssh_key_id", sshKeyId)
+                .log("SSH 키 등록");
 
         // 2. 인벤토리 생성
         String inventoryContent = buildInventory(crName, outputs);
         int inventoryId = createInventory(wc, projectId, crName, inventoryContent, sshKeyId);
-        log.info("[Semaphore] 인벤토리 생성: crName={}, inventoryId={}", crName, inventoryId);
+        log.atInfo()
+                // .addKeyValue("cr_name", crName)
+                .addKeyValue("semaphore_inventory_id", inventoryId)
+                .log("인벤토리 생성");
 
         // 3. 환경 — 정적 config(semaphore.environment.id) 우선, 없으면 동적 생성
         int envId;
@@ -88,24 +88,36 @@ public class SemaphoreHttpClient implements SemaphoreClient {
         if (staticEnvId.isPresent()) {
             envId      = staticEnvId.get();
             dynamicEnv = false;
-            log.info("[Semaphore] 환경 사용 (정적 config): crName={}, envId={}", crName, envId);
+            log.atInfo()
+                    // .addKeyValue("cr_name", crName)
+                    .addKeyValue("semaphore_env_id", envId)
+                    .addKeyValue("env_source", "static")
+                    .log("환경 사용");
         } else {
             envId      = createEnvironment(wc, projectId, crName);
             dynamicEnv = true;
-            log.info("[Semaphore] 환경 생성 (동적): crName={}, envId={}", crName, envId);
+            log.atInfo()
+                    // .addKeyValue("cr_name", crName)
+                    .addKeyValue("semaphore_env_id", envId)
+                    .addKeyValue("env_source", "dynamic")
+                    .log("환경 생성");
         }
 
         // 4. 템플릿 동적 생성
         int templateId = createTemplate(wc, projectId, crName, repositoryId, playbook, sshKeyId, inventoryId, envId);
-        log.info("[Semaphore] 템플릿 생성: crName={}, templateId={}", crName, templateId);
+        log.atInfo()
+                // .addKeyValue("cr_name", crName)
+                .addKeyValue("semaphore_template_id", templateId)
+                .log("템플릿 생성");
 
         // 5. Task 실행
         int taskId = runTask(wc, projectId, templateId, inventoryId, crName);
-        log.info("[Semaphore] Task 실행: crName={}, taskId={}", crName, taskId);
+        log.atInfo()
+                // .addKeyValue("cr_name", crName)
+                .addKeyValue("semaphore_task_id", taskId)
+                .log("Task 실행");
 
-        // 동적 생성이 아닌 경우 sshKeyId는 -1로 저장 (cleanup 시 삭제 스킵)
-        // environmentId는 정적/동적 관계없이 실제 ID 저장 — cleanup 시 config와 비교하여 삭제 여부 결정
-        return new PostProvisionResult(dynamicKey ? sshKeyId : -1, inventoryId, templateId, taskId, envId);
+        return new PostProvisionResult(sshKeyId, inventoryId, templateId, taskId, envId);
     }
 
     @Override
@@ -135,10 +147,18 @@ public class SemaphoreHttpClient implements SemaphoreClient {
 
             return new TaskResult(status, success, sb.toString().stripTrailing());
         } catch (WebClientResponseException e) {
-            log.warn("[Semaphore] Task 결과 조회 실패: taskId={}, status={}", taskId, e.getStatusCode());
+            log.atWarn()
+                    .addKeyValue("semaphore_task_id", taskId)
+                    .addKeyValue("http_status", e.getStatusCode().value())
+                    .setCause(e)
+                    .log("Task 결과 조회 실패");
             return new TaskResult("error", false, "HTTP " + e.getStatusCode().value());
         } catch (Exception e) {
-            log.warn("[Semaphore] Task 결과 조회 실패: taskId={}, error={}", taskId, e.getMessage());
+            log.atWarn()
+                    .addKeyValue("semaphore_task_id", taskId)
+                    .addKeyValue("error", e.getMessage())
+                    .setCause(e)
+                    .log("Task 결과 조회 실패");
             return new TaskResult("error", false, e.getMessage());
         }
     }
@@ -213,8 +233,11 @@ public class SemaphoreHttpClient implements SemaphoreClient {
             JsonNode root = objectMapper.readTree(response);
             return root.path("id").asInt();
         } catch (WebClientResponseException e) {
-            log.error("[Semaphore] SSH 키 등록 실패: status={}, body={}",
-                    e.getStatusCode(), e.getResponseBodyAsString());
+            log.atError()
+                    .addKeyValue("http_status", e.getStatusCode().value())
+                    .addKeyValue("response_body", e.getResponseBodyAsString())
+                    .setCause(e)
+                    .log("SSH 키 등록 실패");
             throw new IllegalStateException("Semaphore SSH 키 등록 실패: " + e.getMessage(), e);
         } catch (Exception e) {
             throw new IllegalStateException("Semaphore SSH 키 등록 실패", e);
@@ -241,8 +264,11 @@ public class SemaphoreHttpClient implements SemaphoreClient {
             JsonNode root = objectMapper.readTree(response);
             return root.path("id").asInt();
         } catch (WebClientResponseException e) {
-            log.error("[Semaphore] 인벤토리 생성 실패: status={}, body={}",
-                    e.getStatusCode(), e.getResponseBodyAsString());
+            log.atError()
+                    .addKeyValue("http_status", e.getStatusCode().value())
+                    .addKeyValue("response_body", e.getResponseBodyAsString())
+                    .setCause(e)
+                    .log("인벤토리 생성 실패");
             throw new IllegalStateException("Semaphore 인벤토리 생성 실패: " + e.getMessage(), e);
         } catch (Exception e) {
             throw new IllegalStateException("Semaphore 인벤토리 생성 실패", e);
@@ -274,8 +300,11 @@ public class SemaphoreHttpClient implements SemaphoreClient {
             JsonNode root = objectMapper.readTree(response);
             return root.path("id").asInt();
         } catch (WebClientResponseException e) {
-            log.error("[Semaphore] 템플릿 생성 실패: status={}, body={}",
-                    e.getStatusCode(), e.getResponseBodyAsString());
+            log.atError()
+                    .addKeyValue("http_status", e.getStatusCode().value())
+                    .addKeyValue("response_body", e.getResponseBodyAsString())
+                    .setCause(e)
+                    .log("템플릿 생성 실패");
             throw new IllegalStateException("Semaphore 템플릿 생성 실패: " + e.getMessage(), e);
         } catch (Exception e) {
             throw new IllegalStateException("Semaphore 템플릿 생성 실패", e);
@@ -303,8 +332,11 @@ public class SemaphoreHttpClient implements SemaphoreClient {
             JsonNode root = objectMapper.readTree(response);
             return root.path("id").asInt();
         } catch (WebClientResponseException e) {
-            log.error("[Semaphore] Task 실행 실패: status={}, body={}",
-                    e.getStatusCode(), e.getResponseBodyAsString());
+            log.atError()
+                    .addKeyValue("http_status", e.getStatusCode().value())
+                    .addKeyValue("response_body", e.getResponseBodyAsString())
+                    .setCause(e)
+                    .log("Task 실행 실패");
             throw new IllegalStateException("Semaphore Task 실행 실패: " + e.getMessage(), e);
         } catch (Exception e) {
             throw new IllegalStateException("Semaphore Task 실행 실패", e);
@@ -318,13 +350,21 @@ public class SemaphoreHttpClient implements SemaphoreClient {
                     .retrieve()
                     .bodyToMono(Void.class)
                     .block();
-            log.info("[Semaphore] 템플릿 삭제: templateId={}", templateId);
+            log.atInfo()
+                    .addKeyValue("semaphore_template_id", templateId)
+                    .log("템플릿 삭제");
         } catch (WebClientResponseException e) {
             if (e.getStatusCode().value() == 404) {
-                log.debug("[Semaphore] 템플릿 이미 없음 (정상): templateId={}", templateId);
+                log.atDebug()
+                        .addKeyValue("semaphore_template_id", templateId)
+                        .log("템플릿 이미 없음 (정상)");
                 return;
             }
-            log.warn("[Semaphore] 템플릿 삭제 실패: templateId={}, status={}", templateId, e.getStatusCode());
+            log.atWarn()
+                    .addKeyValue("semaphore_template_id", templateId)
+                    .addKeyValue("http_status", e.getStatusCode().value())
+                    .setCause(e)
+                    .log("템플릿 삭제 실패");
         }
     }
 
@@ -335,13 +375,21 @@ public class SemaphoreHttpClient implements SemaphoreClient {
                     .retrieve()
                     .bodyToMono(Void.class)
                     .block();
-            log.info("[Semaphore] 인벤토리 삭제: inventoryId={}", inventoryId);
+            log.atInfo()
+                    .addKeyValue("semaphore_inventory_id", inventoryId)
+                    .log("인벤토리 삭제");
         } catch (WebClientResponseException e) {
             if (e.getStatusCode().value() == 404) {
-                log.debug("[Semaphore] 인벤토리 이미 없음 (정상): inventoryId={}", inventoryId);
+                log.atDebug()
+                        .addKeyValue("semaphore_inventory_id", inventoryId)
+                        .log("인벤토리 이미 없음 (정상)");
                 return;
             }
-            log.warn("[Semaphore] 인벤토리 삭제 실패: inventoryId={}, status={}", inventoryId, e.getStatusCode());
+            log.atWarn()
+                    .addKeyValue("semaphore_inventory_id", inventoryId)
+                    .addKeyValue("http_status", e.getStatusCode().value())
+                    .setCause(e)
+                    .log("인벤토리 삭제 실패");
         }
     }
 
@@ -352,13 +400,21 @@ public class SemaphoreHttpClient implements SemaphoreClient {
                     .retrieve()
                     .bodyToMono(Void.class)
                     .block();
-            log.info("[Semaphore] SSH 키 삭제: sshKeyId={}", sshKeyId);
+            log.atInfo()
+                    .addKeyValue("semaphore_ssh_key_id", sshKeyId)
+                    .log("SSH 키 삭제");
         } catch (WebClientResponseException e) {
             if (e.getStatusCode().value() == 404) {
-                log.debug("[Semaphore] SSH 키 이미 없음 (정상): sshKeyId={}", sshKeyId);
+                log.atDebug()
+                        .addKeyValue("semaphore_ssh_key_id", sshKeyId)
+                        .log("SSH 키 이미 없음 (정상)");
                 return;
             }
-            log.warn("[Semaphore] SSH 키 삭제 실패: sshKeyId={}, status={}", sshKeyId, e.getStatusCode());
+            log.atWarn()
+                    .addKeyValue("semaphore_ssh_key_id", sshKeyId)
+                    .addKeyValue("http_status", e.getStatusCode().value())
+                    .setCause(e)
+                    .log("SSH 키 삭제 실패");
         }
     }
 
@@ -380,8 +436,11 @@ public class SemaphoreHttpClient implements SemaphoreClient {
             JsonNode root = objectMapper.readTree(response);
             return root.path("id").asInt();
         } catch (WebClientResponseException e) {
-            log.error("[Semaphore] 환경 생성 실패: status={}, body={}",
-                    e.getStatusCode(), e.getResponseBodyAsString());
+            log.atError()
+                    .addKeyValue("http_status", e.getStatusCode().value())
+                    .addKeyValue("response_body", e.getResponseBodyAsString())
+                    .setCause(e)
+                    .log("환경 생성 실패");
             throw new IllegalStateException("Semaphore 환경 생성 실패: " + e.getMessage(), e);
         } catch (Exception e) {
             throw new IllegalStateException("Semaphore 환경 생성 실패", e);
@@ -395,13 +454,21 @@ public class SemaphoreHttpClient implements SemaphoreClient {
                     .retrieve()
                     .bodyToMono(Void.class)
                     .block();
-            log.info("[Semaphore] 환경 삭제: environmentId={}", environmentId);
+            log.atInfo()
+                    .addKeyValue("semaphore_env_id", environmentId)
+                    .log("환경 삭제");
         } catch (WebClientResponseException e) {
             if (e.getStatusCode().value() == 404) {
-                log.debug("[Semaphore] 환경 이미 없음 (정상): environmentId={}", environmentId);
+                log.atDebug()
+                        .addKeyValue("semaphore_env_id", environmentId)
+                        .log("환경 이미 없음 (정상)");
                 return;
             }
-            log.warn("[Semaphore] 환경 삭제 실패: environmentId={}, status={}", environmentId, e.getStatusCode());
+            log.atWarn()
+                    .addKeyValue("semaphore_env_id", environmentId)
+                    .addKeyValue("http_status", e.getStatusCode().value())
+                    .setCause(e)
+                    .log("환경 삭제 실패");
         }
     }
 
