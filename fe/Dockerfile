@@ -1,6 +1,8 @@
 # deps stage — 모든 의존성 설치 (빌드용)
 FROM node:20-alpine AS deps
 WORKDIR /app
+# package-lock.json이 npm 11(lockfileVersion 4)로 생성된 경우 npm 10과 호환되지 않으므로 업그레이드
+RUN npm install -g npm@11
 COPY package.json package-lock.json ./
 RUN npm ci
 
