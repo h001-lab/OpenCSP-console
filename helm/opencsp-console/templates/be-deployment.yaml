@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "opencsp-console.fullname" . }}-be
+  labels:
+    {{- include "opencsp-console.labels" . | nindent 4 }}
+    app.kubernetes.io/component: be
+spec:
+  replicas: {{ .Values.be.replicas }}
+  selector:
+    matchLabels:
+      {{- include "opencsp-console.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: be
+  template:
+    metadata:
+      labels:
+        {{- include "opencsp-console.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: be
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: be
+          image: "{{ .Values.be.image.repository }}:{{ .Values.be.image.tag }}"
+          imagePullPolicy: {{ .Values.be.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.be.service.port }}
+              protocol: TCP
+          env:
+            {{- range $key, $val := .Values.be.env }}
+            - name: {{ $key }}
+              value: {{ $val | quote }}
+            {{- end }}
+          {{- if .Values.be.existingSecret }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.be.existingSecret }}
+          {{- end }}
+          startupProbe:
+            tcpSocket:
+              port: {{ .Values.be.service.port }}
+            failureThreshold: 30
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.be.service.port }}
+            initialDelaySeconds: 0
+            periodSeconds: 20
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.be.service.port }}
+            initialDelaySeconds: 0
+            periodSeconds: 10
+          {{- with .Values.be.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}

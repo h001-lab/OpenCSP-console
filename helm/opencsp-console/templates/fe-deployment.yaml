@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "opencsp-console.fullname" . }}-fe
+  labels:
+    {{- include "opencsp-console.labels" . | nindent 4 }}
+    app.kubernetes.io/component: fe
+spec:
+  replicas: {{ .Values.fe.replicas }}
+  selector:
+    matchLabels:
+      {{- include "opencsp-console.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: fe
+  template:
+    metadata:
+      labels:
+        {{- include "opencsp-console.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: fe
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: fe
+          image: "{{ .Values.fe.image.repository }}:{{ .Values.fe.image.tag }}"
+          imagePullPolicy: {{ .Values.fe.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.fe.service.port }}
+              protocol: TCP
+          env:
+            # BACKEND_URL: 미설정 시 BE ClusterIP 서비스 URL 자동 설정
+            - name: BACKEND_URL
+              value: {{ .Values.fe.env.BACKEND_URL | default (include "opencsp-console.beServiceURL" .) | quote }}
+            {{- range $key, $val := .Values.fe.env }}
+            {{- if ne $key "BACKEND_URL" }}
+            - name: {{ $key }}
+              value: {{ $val | quote }}
+            {{- end }}
+            {{- end }}
+          {{- if .Values.fe.existingSecret }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.fe.existingSecret }}
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.fe.service.port }}
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.fe.service.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          {{- with .Values.fe.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}

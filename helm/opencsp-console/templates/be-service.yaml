@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "opencsp-console.fullname" . }}-be
+  labels:
+    {{- include "opencsp-console.labels" . | nindent 4 }}
+    app.kubernetes.io/component: be
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.be.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "opencsp-console.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: be

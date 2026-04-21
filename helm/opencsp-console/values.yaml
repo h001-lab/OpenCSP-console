@@ -1,0 +1,80 @@
+# ─────────────────────────────────────────────
+# BE (Spring Boot)
+# ─────────────────────────────────────────────
+be:
+  image:
+    repository: ghcr.io/h001-lab/opencsp-console-be
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  replicas: 1
+  service:
+    port: 8080
+  # 비민감 환경변수 — 키: 값 형태로 자유롭게 추가
+  # 민감한 값(ENCRYPT_KEY, DB 비밀번호 등)은 existingSecret에 k8s Secret을 지정
+  env:
+    APP_IAM_PROVIDER: "none"
+    APP_K8S_ENABLED: "false"
+    # 프로덕션 DB 연결 예시 (H2 인메모리가 기본값)
+    # SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres:5432/opencsp"
+    # SPRING_DATASOURCE_DRIVER: "org.postgresql.Driver"
+    # SPRING_JPA_DIALECT: "org.hibernate.dialect.PostgreSQLDialect"
+    # SPRING_DATASOURCE_POOL_SIZE: "5"
+  # 민감 환경변수를 담은 기존 k8s Secret 이름 (envFrom.secretRef)
+  # 포함 권장 키: APP_CONFIG_ENCRYPTION_KEY, SPRING_DATASOURCE_USERNAME,
+  #              SPRING_DATASOURCE_PASSWORD, ZITADEL_* 등
+  existingSecret: ""
+  resources: {}
+  #   requests:
+  #     cpu: 250m
+  #     memory: 512Mi
+  #   limits:
+  #     cpu: 1000m
+  #     memory: 1Gi
+
+# ─────────────────────────────────────────────
+# FE (Next.js)
+# ─────────────────────────────────────────────
+fe:
+  image:
+    repository: ghcr.io/h001-lab/opencsp-console-fe
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  replicas: 1
+  service:
+    port: 3000
+  # BACKEND_URL 미설정 시 차트 내부에서 BE ClusterIP 서비스 URL을 자동 생성
+  env:
+    BACKEND_URL: ""
+    # NEXTAUTH_URL: "https://opencsp.example.com"
+  # 민감 환경변수를 담은 기존 k8s Secret 이름 (envFrom.secretRef)
+  # 포함 권장 키: NEXTAUTH_SECRET, ZITADEL_ISSUER, ZITADEL_CLIENT_ID
+  existingSecret: ""
+  resources: {}
+
+# ─────────────────────────────────────────────
+# Ingress
+# ─────────────────────────────────────────────
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  #   cert-manager.io/cluster-issuer: letsencrypt-prod
+  #   nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+  hosts:
+    - host: opencsp.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  #   - secretName: opencsp-tls
+  #     hosts:
+  #       - opencsp.example.com
+
+# ─────────────────────────────────────────────
+# 공통
+# ─────────────────────────────────────────────
+imagePullSecrets: []
+#   - name: ghcr-secret
+
+nameOverride: ""
+fullnameOverride: ""

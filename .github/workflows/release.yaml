@@ -1,0 +1,129 @@
+name: Release
+
+# v* 태그 push 또는 수동 실행 시 트리거
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '배포 버전 (v 제외, 예: 1.0.0)'
+        required: true
+
+permissions:
+  contents: read
+  packages: write   # GHCR 이미지 및 Helm chart OCI 푸시 권한
+
+env:
+  REGISTRY: ghcr.io
+  OWNER: ${{ github.repository_owner }}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 1) version 계산 — 태그에서 v 제거 또는 수동 입력값 사용
+# ─────────────────────────────────────────────────────────────────────────────
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+    steps:
+      - name: Resolve version
+        id: ver
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="${{ github.event.inputs.version }}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Releasing version: $VERSION"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 2a) BE Docker 이미지 빌드 & GHCR 푸시
+# ─────────────────────────────────────────────────────────────────────────────
+  build-be:
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push BE image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./be
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/opencsp-console-be:${{ needs.prepare.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/opencsp-console-be:latest
+          cache-from: type=gha,scope=be
+          cache-to:   type=gha,scope=be,mode=max
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 2b) FE Docker 이미지 빌드 & GHCR 푸시
+# ─────────────────────────────────────────────────────────────────────────────
+  build-fe:
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push FE image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./fe
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/opencsp-console-fe:${{ needs.prepare.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/opencsp-console-fe:latest
+          cache-from: type=gha,scope=fe
+          cache-to:   type=gha,scope=fe,mode=max
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 3) Helm chart 패키징 & GHCR OCI 푸시 (BE + FE 빌드 완료 후)
+# ─────────────────────────────────────────────────────────────────────────────
+  helm-push:
+    needs: [prepare, build-be, build-fe]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Login to GHCR (Helm OCI)
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | \
+            helm registry login ${{ env.REGISTRY }} \
+              --username ${{ github.actor }} \
+              --password-stdin
+
+      - name: Package and push Helm chart
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+          helm package helm/opencsp-console \
+            --version "$VERSION" \
+            --app-version "$VERSION"
+          helm push "opencsp-console-${VERSION}.tgz" \
+            oci://${{ env.REGISTRY }}/${{ env.OWNER }}/charts
+          echo "Helm chart pushed: oci://${{ env.REGISTRY }}/${{ env.OWNER }}/charts/opencsp-console:$VERSION"

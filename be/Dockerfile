@@ -12,5 +12,5 @@ FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 RUN addgroup -S spring && adduser -S spring -G spring
 USER spring
-COPY --from=builder /app/build/libs/*-SNAPSHOT.jar app.jar
+COPY --from=builder /app/build/libs/*.jar app.jar
 ENTRYPOINT ["java", "-jar", "app.jar"]
