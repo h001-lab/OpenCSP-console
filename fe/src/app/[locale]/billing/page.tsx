@@ -19,6 +19,14 @@ interface BillingMessages {
       consoleSessions: string;
       consoleMinutes: string;
     };
+    cpuQuota: {
+      title: string;
+      used: string;
+      limit: string;
+      unlimited: string;
+      unit: string;
+      of: string;
+    };
   };
   history: {
     title: string;
@@ -33,6 +41,8 @@ interface BillingSummary {
   activeProvisions: number;
   totalConsoleSessions: number;
   totalConsoleMinutes: number;
+  monthlyCpuUsed: number;
+  monthlyCpuLimit: number;
 }
 
 export default function BillingPage() {
@@ -101,6 +111,38 @@ export default function BillingPage() {
                 </p>
               </div>
             ))}
+          </div>
+
+          {/* Monthly CPU quota */}
+          <div className="mt-4 bg-white rounded-lg border p-4">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-gray-500">{t.summary.cpuQuota.title}</p>
+              <p className="text-xs text-gray-500">
+                {summary
+                  ? summary.monthlyCpuLimit > 0
+                    ? `${summary.monthlyCpuUsed} ${t.summary.cpuQuota.of} ${summary.monthlyCpuLimit} ${t.summary.cpuQuota.unit}`
+                    : t.summary.cpuQuota.unlimited
+                  : "—"}
+              </p>
+            </div>
+            <div className="w-full bg-gray-100 rounded-full h-2">
+              {summary && summary.monthlyCpuLimit > 0 ? (
+                <div
+                  className="h-2 rounded-full transition-all"
+                  style={{
+                    width: `${Math.min(100, (summary.monthlyCpuUsed / summary.monthlyCpuLimit) * 100)}%`,
+                    backgroundColor:
+                      summary.monthlyCpuUsed / summary.monthlyCpuLimit >= 0.9
+                        ? "#ef4444"
+                        : summary.monthlyCpuUsed / summary.monthlyCpuLimit >= 0.7
+                          ? "#f59e0b"
+                          : "#3b82f6",
+                  }}
+                />
+              ) : (
+                <div className="h-2 rounded-full bg-blue-500" style={{ width: summary ? "8px" : "0%" }} />
+              )}
+            </div>
           </div>
         </section>
 
