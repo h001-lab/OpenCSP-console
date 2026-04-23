@@ -19,7 +19,7 @@ spring:
       - org.springframework.ai.model.openai.autoconfigure.OpenAiModerationAutoConfiguration
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:h2:file:./data/opencsp;AUTO_SERVER=TRUE;DB_CLOSE_ON_EXIT=FALSE}
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:file:./data/opencsp;DB_CLOSE_ON_EXIT=FALSE}
     username: ${SPRING_DATASOURCE_USERNAME:sa}
     password: ${SPRING_DATASOURCE_PASSWORD:}
     driver-class-name: ${SPRING_DATASOURCE_DRIVER:org.h2.Driver}

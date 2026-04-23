@@ -19,9 +19,30 @@ be:
     # SPRING_DATASOURCE_DRIVER: "org.postgresql.Driver"
     # SPRING_JPA_DIALECT: "org.hibernate.dialect.PostgreSQLDialect"
     # SPRING_DATASOURCE_POOL_SIZE: "5"
+    #
+    # ── IAM 연동 Option A (엔지니어용) ──────────────────────────────────────
+    # Zitadel 자격증명을 env 변수로 직접 주입하는 방식.
+    # existingSecret 에 아래 키를 포함한 k8s Secret을 지정하면 됩니다.
+    # ConfigStore는 DB → env 순으로 값을 읽으므로 Secret에 값이 있으면 자동으로 사용됩니다.
+    #
+    # APP_IAM_PROVIDER: "zitadel"          # env로 직접 zitadel 모드 활성화
+    # ZITADEL_ISSUER_URI: "https://..."    # ConfigCategory.IAM / zitadel.issuer-uri
+    # ZITADEL_CLIENT_ID: "..."             # ConfigCategory.IAM / zitadel.client-id
+    # ZITADEL_CLIENT_SECRET: "..."         # ConfigCategory.IAM / zitadel.client-secret
+    # ZITADEL_ORG_ID: "..."                # ConfigCategory.IAM / zitadel.org-id
+    # ZITADEL_PROJECT_ID: "..."            # ConfigCategory.IAM / zitadel.project-id
+    # ZITADEL_SERVICE_TOKEN: "..."         # ConfigCategory.IAM / zitadel.service-token
+    #
+    # ── IAM 연동 Option B (일반 사용자용) ────────────────────────────────────
+    # APP_IAM_PROVIDER: "none" (기본값) 으로 배포 후, 관리자 UI(/admin/integrations)에서
+    # Zitadel 자격증명을 먼저 입력·저장한 다음 Provider를 Zitadel로 전환합니다.
+    # 자격증명 없이 Provider를 전환하려 하면 BE가 400 오류를 반환하여 잠금 상태를 방지합니다.
   # 민감 환경변수를 담은 기존 k8s Secret 이름 (envFrom.secretRef)
   # 포함 권장 키: APP_CONFIG_ENCRYPTION_KEY, SPRING_DATASOURCE_USERNAME,
-  #              SPRING_DATASOURCE_PASSWORD, ZITADEL_* 등
+  #              SPRING_DATASOURCE_PASSWORD
+  #              Option A 사용 시: ZITADEL_ISSUER_URI, ZITADEL_CLIENT_ID,
+  #              ZITADEL_CLIENT_SECRET, ZITADEL_ORG_ID, ZITADEL_PROJECT_ID,
+  #              ZITADEL_SERVICE_TOKEN, APP_IAM_PROVIDER
   existingSecret: ""
   resources: {}
   #   requests:
