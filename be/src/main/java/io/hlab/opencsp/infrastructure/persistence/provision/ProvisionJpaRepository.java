@@ -7,6 +7,7 @@ import io.hlab.opencsp.domain.provision.SemaphoreStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -54,5 +55,10 @@ public class ProvisionJpaRepository implements ProvisionRepository {
     @Override
     public Optional<Long> findMaxVmId() {
         return jpa.findMaxVmId();
+    }
+
+    @Override
+    public int sumCpuCoresByUserIdAndCreatedAtBetween(String userId, LocalDateTime from, LocalDateTime to) {
+        return jpa.sumCpuCoresByUserIdAndPeriod(userId, from, to);
     }
 }

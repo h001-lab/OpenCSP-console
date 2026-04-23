@@ -17,6 +17,9 @@ public enum ErrorCode {
     IAM_ROLE_REMOVE_FAILED("IAM_ROLE_REMOVE_FAILED", "Role 제거에 실패했습니다.", 500),
     IAM_ROLE_QUERY_FAILED("IAM_ROLE_QUERY_FAILED", "Role 조회에 실패했습니다.", 500),
     
+    // 프로비저닝 관련
+    CPU_QUOTA_EXCEEDED("CPU_QUOTA_EXCEEDED", "월간 CPU 할당량을 초과했습니다.", 429),
+
     // 공통
     INVALID_INPUT("INVALID_INPUT", "잘못된 입력입니다.", 400),
     UNAUTHORIZED("UNAUTHORIZED", "인증이 필요합니다.", 401),

@@ -58,6 +58,10 @@ public class Provision extends SemaphoreTrackable {
     @Column(name = "vm_hostname", length = 255)
     private String vmHostname;
 
+    /** 요청된 vCPU 코어 수 (월간 CPU 할당량 집계에 사용) */
+    @Column(name = "cpu_cores")
+    private Integer cpuCores;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private ProvisionStatus status;
@@ -104,6 +108,10 @@ public class Provision extends SemaphoreTrackable {
     public void updateVmHostname(String vmHostname) {
         this.vmHostname = vmHostname;
         this.updatedAt = LocalDateTime.now();
+    }
+
+    public void assignCpuCores(Integer cpuCores) {
+        this.cpuCores = cpuCores;
     }
 
     public void assignTenant(String tenantId) {

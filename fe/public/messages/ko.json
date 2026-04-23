@@ -589,6 +589,14 @@
         "activeProvisions": "대",
         "consoleSessions": "세션",
         "consoleMinutes": "분"
+      },
+      "cpuQuota": {
+        "title": "월간 CPU 할당량",
+        "used": "사용",
+        "limit": "한도",
+        "unlimited": "무제한",
+        "unit": "코어",
+        "of": "/"
       }
     },
     "history": {

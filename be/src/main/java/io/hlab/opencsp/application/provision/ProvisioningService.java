@@ -11,6 +11,9 @@ import io.hlab.opencsp.domain.provision.ProvisionRepository;
 import io.hlab.opencsp.domain.provision.ProvisionStatus;
 import io.hlab.opencsp.domain.provision.SemaphoreStatus;
 import io.hlab.opencsp.application.billing.BillingService;
+import io.hlab.opencsp.common.exception.ErrorCode;
+import io.hlab.opencsp.domain.config.ConfigCategory;
+import io.hlab.opencsp.infrastructure.config.ConfigStore;
 import io.hlab.opencsp.infrastructure.k8s.ProvisionRequest;
 import io.hlab.opencsp.infrastructure.k8s.ProvisioningClient;
 import io.hlab.opencsp.infrastructure.semaphore.SemaphoreClient;
@@ -18,6 +21,7 @@ import java.io.ByteArrayOutputStream;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -45,6 +49,7 @@ public class ProvisioningService {
     private final ProvisionHistoryRepository provisionHistoryRepository;
     private final SemaphoreClient semaphoreClient;
     private final BillingService billingService;
+    private final ConfigStore configStore;
 
     private static final Map<String, String> DEFAULT_MODULE_PATHS = Map.of(
             "proxmox-vm",      "./bootstrap/terraform/provisions/proxmox-vm",
@@ -95,6 +100,12 @@ public class ProvisioningService {
                 }
             }
 
+            // 월간 CPU 할당량 초과 여부 확인
+            int requestedCpu = Optional.ofNullable(sanitizedVars.get("vm_cpu"))
+                    .map(v -> Integer.parseInt(v.toString()))
+                    .orElse(0);
+            checkMonthlyCpuQuota(userId, requestedCpu);
+
             ProvisionRequest request = ProvisionRequest.builder()
                     .moduleType(moduleType)
                     .modulePath(modulePath)
@@ -117,6 +128,10 @@ public class ProvisioningService {
                     .map(Object::toString)
                     .orElse(null);
             Provision saved = provisionRepository.save(Provision.create(crName, moduleType, fluxNamespace, gitRepositoryName, userId, vmId, proxmoxNode, vmHostname));
+            if (requestedCpu > 0) {
+                saved.assignCpuCores(requestedCpu);
+                provisionRepository.save(saved);
+            }
             provisionHistoryRepository.save(ProvisionHistory.created(saved));
 
             MDC.put("task_id", saved.getProvisionTaskId());
@@ -614,6 +629,38 @@ public class ProvisioningService {
             }
         }
         return ProvisionStatus.APPLYING;
+    }
+
+    /**
+     * 유저의 이번 달 CPU 코어 누적 사용량이 한도를 초과하는지 확인한다.
+     * {@code provision.monthly_cpu_limit_per_user} 설정이 없거나 0 이하이면 무제한.
+     *
+     * @throws BusinessException CPU 할당량 초과 시
+     */
+    private void checkMonthlyCpuQuota(String userId, int requestedCpu) {
+        String limitStr = configStore.get(ConfigCategory.PROVISION, "monthly_cpu_limit_per_user", "0");
+        int limit;
+        try {
+            limit = Integer.parseInt(limitStr);
+        } catch (NumberFormatException e) {
+            limit = 0;
+        }
+        if (limit <= 0) return; // 무제한
+
+        YearMonth current = YearMonth.now();
+        LocalDateTime from = current.atDay(1).atStartOfDay();
+        LocalDateTime to = current.plusMonths(1).atDay(1).atStartOfDay();
+        int used = provisionRepository.sumCpuCoresByUserIdAndCreatedAtBetween(userId, from, to);
+
+        if (used + requestedCpu > limit) {
+            log.atWarn()
+                    .addKeyValue("user_id", userId)
+                    .addKeyValue("cpu_used", used)
+                    .addKeyValue("cpu_requested", requestedCpu)
+                    .addKeyValue("cpu_limit", limit)
+                    .log("월간 CPU 할당량 초과");
+            throw ErrorCode.CPU_QUOTA_EXCEEDED.toException();
+        }
     }
 
     private String resolveModulePath(String moduleType) {

@@ -589,6 +589,14 @@
         "activeProvisions": "running",
         "consoleSessions": "sessions",
         "consoleMinutes": "min"
+      },
+      "cpuQuota": {
+        "title": "Monthly CPU Quota",
+        "used": "Used",
+        "limit": "Limit",
+        "unlimited": "Unlimited",
+        "unit": "cores",
+        "of": "of"
       }
     },
     "history": {
