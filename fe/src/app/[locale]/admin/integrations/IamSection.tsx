@@ -106,16 +106,22 @@ export function IamConfigSection({ configs, onSaved, t }: IamConfigSectionProps)
           body: JSON.stringify({ category: "IAM", key: field.key, value, sensitive: field.sensitive ?? false }),
         });
       }
-      await fetch("/api/admin/configs", {
+      const providerRes = await fetch("/api/admin/configs", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ category: "GENERAL", key: "iam.provider", value: provider, sensitive: false }),
       });
-      setSavedMsg({ ok: true, msg: ti.savedOk });
+      if (!providerRes.ok) {
+        const body = await providerRes.json().catch(() => null);
+        const msg = body?.message ?? body?.error ?? t.saveFailed;
+        setSavedMsg({ ok: false, msg });
+        return;
+      }
       setDirty(false);
       if (dbProvider === "none" && provider !== "none") {
         setSavedMsg({ ok: true, msg: ti.savedOk + " — " + ti.loginRequired });
       } else {
+        setSavedMsg({ ok: true, msg: ti.savedOk });
         onSaved();
       }
     } catch {

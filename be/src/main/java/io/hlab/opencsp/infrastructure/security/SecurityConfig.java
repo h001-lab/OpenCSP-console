@@ -79,10 +79,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/public/**").permitAll()
                 // WebSocket 핸드셰이크: sessionId 기반 자체 검증 (ConsoleWebSocketHandler)
                 .requestMatchers("/api/console/ws/**").permitAll()
-                // iam.provider를 요청마다 동적으로 확인
+                // iam.provider=zitadel AND issuer-uri 설정 완료된 경우에만 JWT 인증 요구
                 .anyRequest().access((authSupplier, context) -> {
-                    String provider = configStore.get(ConfigCategory.GENERAL, "iam.provider", "none");
-                    if (!"zitadel".equals(provider)) {
+                    if (!isZitadelEffective(configStore)) {
                         return new AuthorizationDecision(true);
                     }
                     Authentication authentication = authSupplier.get();
@@ -166,8 +165,7 @@ public class SecurityConfig {
         @Override
         protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response,
                                         @NonNull FilterChain chain) throws ServletException, IOException {
-            String provider = configStore.get(ConfigCategory.GENERAL, "iam.provider", "none");
-            if (!"zitadel".equals(provider)) {
+            if (!isZitadelEffective(configStore)) {
                 List<GrantedAuthority> authorities = List.of(
                     new SimpleGrantedAuthority("ROLE_" + IamRole.ADMIN.name()),
                     new SimpleGrantedAuthority("ROLE_" + IamRole.USER_A.name())
@@ -194,9 +192,21 @@ public class SecurityConfig {
 
         @Override
         public String resolve(HttpServletRequest request) {
-            String provider = configStore.get(ConfigCategory.GENERAL, "iam.provider", "none");
-            return "zitadel".equals(provider) ? delegate.resolve(request) : null;
+            return isZitadelEffective(configStore) ? delegate.resolve(request) : null;
         }
+    }
+
+    /**
+     * iam.provider=zitadel이고 zitadel.issuer-uri가 설정된 경우에만 true를 반환한다.
+     *
+     * issuer-uri 없이 zitadel 모드가 활성화되면 DynamicZitadelJwtDecoder가 BadJwtException을 던져
+     * 전체 API가 401로 잠기는 현상을 방지한다. issuer-uri 미설정 시 none 모드로 폴백한다.
+     */
+    static boolean isZitadelEffective(ConfigStore configStore) {
+        String provider = configStore.get(ConfigCategory.GENERAL, "iam.provider", "none");
+        if (!"zitadel".equals(provider)) return false;
+        String issuerUri = configStore.get(ConfigCategory.IAM, "zitadel.issuer-uri", "");
+        return org.springframework.util.StringUtils.hasText(issuerUri);
     }
 
     /**
