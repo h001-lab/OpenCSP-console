@@ -8,9 +8,10 @@ export async function callBackend(
   options?: RequestInit,
   req?: NextRequest
 ): Promise<Response> {
+  const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET;
   const token = await getToken({
     req: req ?? ({ headers: Object.fromEntries(await headers()) } as { headers: Record<string, string> }),
-    secret: process.env.AUTH_SECRET,
+    secret,
   });
 
   const reqHeaders: Record<string, string> = {

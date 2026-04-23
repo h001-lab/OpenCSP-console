@@ -77,8 +77,9 @@ logging:
       hlab:
         opencsp:
           infrastructure:
-            security: INFO
-            iam: INFO
+            security: DEBUG
+            iam: DEBUG
+            config: DEBUG
             teleport: DEBUG
             k8s: DEBUG
     org:

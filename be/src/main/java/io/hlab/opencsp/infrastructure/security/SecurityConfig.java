@@ -166,6 +166,10 @@ public class SecurityConfig {
         protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response,
                                         @NonNull FilterChain chain) throws ServletException, IOException {
             if (!isZitadelEffective(configStore)) {
+                log.atDebug()
+                        .addKeyValue("request_uri", request.getRequestURI())
+                        .addKeyValue("iam_mode", "none")
+                        .log("NoIamAuthFilter: injecting ADMIN+USER_A into SecurityContext");
                 List<GrantedAuthority> authorities = List.of(
                     new SimpleGrantedAuthority("ROLE_" + IamRole.ADMIN.name()),
                     new SimpleGrantedAuthority("ROLE_" + IamRole.USER_A.name())
@@ -173,6 +177,11 @@ public class SecurityConfig {
                 SecurityContextHolder.getContext().setAuthentication(
                     new UsernamePasswordAuthenticationToken("anonymous", null, authorities)
                 );
+            } else {
+                log.atDebug()
+                        .addKeyValue("request_uri", request.getRequestURI())
+                        .addKeyValue("iam_mode", "zitadel")
+                        .log("NoIamAuthFilter: zitadel mode, skipping injection");
             }
             chain.doFilter(request, response);
         }
@@ -192,7 +201,20 @@ public class SecurityConfig {
 
         @Override
         public String resolve(HttpServletRequest request) {
-            return isZitadelEffective(configStore) ? delegate.resolve(request) : null;
+            if (!isZitadelEffective(configStore)) {
+                log.atDebug()
+                        .addKeyValue("request_uri", request.getRequestURI())
+                        .addKeyValue("iam_mode", "none")
+                        .log("BearerTokenResolver: none mode, skipping token extraction");
+                return null;
+            }
+            String token = delegate.resolve(request);
+            log.atDebug()
+                    .addKeyValue("request_uri", request.getRequestURI())
+                    .addKeyValue("iam_mode", "zitadel")
+                    .addKeyValue("token_present", token != null)
+                    .log("BearerTokenResolver: token extraction result");
+            return token;
         }
     }
 
@@ -204,9 +226,20 @@ public class SecurityConfig {
      */
     static boolean isZitadelEffective(ConfigStore configStore) {
         String provider = configStore.get(ConfigCategory.GENERAL, "iam.provider", "none");
-        if (!"zitadel".equals(provider)) return false;
+        if (!"zitadel".equals(provider)) {
+            log.atDebug()
+                    .addKeyValue("iam_provider", provider)
+                    .log("isZitadelEffective: false (provider is not zitadel)");
+            return false;
+        }
         String issuerUri = configStore.get(ConfigCategory.IAM, "zitadel.issuer-uri", "");
-        return org.springframework.util.StringUtils.hasText(issuerUri);
+        boolean effective = org.springframework.util.StringUtils.hasText(issuerUri);
+        log.atDebug()
+                .addKeyValue("iam_provider", provider)
+                .addKeyValue("issuer_uri_set", effective)
+                .addKeyValue("issuer_uri", issuerUri.isEmpty() ? "(empty)" : issuerUri)
+                .log("isZitadelEffective: " + effective);
+        return effective;
     }
 
     /**
