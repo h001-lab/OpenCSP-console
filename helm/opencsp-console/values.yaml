@@ -68,7 +68,7 @@ fe:
     BACKEND_URL: ""
     # NEXTAUTH_URL: "https://opencsp.example.com"
   # 민감 환경변수를 담은 기존 k8s Secret 이름 (envFrom.secretRef)
-  # 포함 권장 키: NEXTAUTH_SECRET, ZITADEL_ISSUER, ZITADEL_CLIENT_ID
+  # 포함 권장 키: AUTH_SECRET (또는 NEXTAUTH_SECRET), ZITADEL_ISSUER, ZITADEL_CLIENT_ID
   existingSecret: ""
   resources: {}
 

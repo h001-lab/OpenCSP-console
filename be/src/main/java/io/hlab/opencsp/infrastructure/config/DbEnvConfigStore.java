@@ -38,9 +38,17 @@ public class DbEnvConfigStore implements ConfigStore {
 
     @Override
     public Optional<String> get(ConfigCategory category, String key) {
-        return repository.findByCategoryAndKey(category, key)
-                .map(AppConfig::getValue)
-                .or(() -> lookupEnv(category, key));
+        Optional<String> dbValue = repository.findByCategoryAndKey(category, key)
+                .map(AppConfig::getValue);
+        if (dbValue.isPresent()) {
+            log.atDebug()
+                    .addKeyValue("category", category)
+                    .addKeyValue("config_key", key)
+                    .addKeyValue("env_source", "db")
+                    .log("Config lookup: DB hit");
+            return dbValue;
+        }
+        return lookupEnv(category, key);
     }
 
     @Override
