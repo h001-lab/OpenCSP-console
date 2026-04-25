@@ -16,3 +16,14 @@ run-docker:
 
 clean:
 	./gradlew clean
+
+docker-build:
+	docker build -t opencsp-be:latest . 
+
+docker-run:
+	docker run --rm -v $(shell pwd)/.env:/app/.env -p 8080:8080 opencsp-be:latest
+
+docker-clean:
+	docker rmi opencsp-be:latest
+	docker system prune -f
+

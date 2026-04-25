@@ -66,6 +66,16 @@ spring:
           temperature: ${SPRING_AI_OPENAI_CHAT_OPTIONS_TEMPERATURE:0.0}
           max-tokens: ${SPRING_AI_OPENAI_CHAT_OPTIONS_MAX_TOKENS:1024}
 
+# Spring Boot Actuator 헬스 체크 엔드포인트 노출
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health"
+  endpoint:
+    health:
+      show-details: always
+
 logging:
   structured:
     format:
@@ -77,8 +87,8 @@ logging:
       hlab:
         opencsp:
           infrastructure:
-            security: DEBUG
-            iam: DEBUG
+            security: INFO
+            iam: INFO
             config: DEBUG
             teleport: DEBUG
             k8s: DEBUG
