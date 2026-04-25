@@ -161,24 +161,43 @@
     "monitoring": {
       "title": "모니터링",
       "sub_title_1": "로그 및 보고서",
+      "clusterTitle": "클러스터",
       "nodeMetrics": {
-        "title": "노드 메트릭",
+        "title": "메트릭",
         "description": "Proxmox 노드 API를 통해 수집된 실시간 리소스 사용량입니다.",
         "refresh": "새로고침",
         "loading": "불러오는 중...",
         "empty": "등록된 노드가 없습니다.",
-        "noMetrics": "메트릭 없음",
+        "noMetrics": "메트릭 없음 (폴링 대기 중)",
         "noCredentials": "API 크레덴셜 미설정",
         "lastUpdated": "갱신",
         "cpu": "CPU",
-        "mem": "메모리",
-        "disk": "디스크",
+        "mem": "MEM",
+        "disk": "DISK",
         "status": {
           "ACTIVE": "활성",
           "ISOLATED": "격리",
           "MAINTENANCE": "점검",
           "OFFLINE": "오프라인"
         }
+      },
+      "topology": {
+        "title": "토폴로지",
+        "description": "클러스터 노드 구성 현황입니다."
+      },
+      "traffic": {
+        "title": "실시간 트래픽",
+        "description": "네트워크 I/O 모니터링",
+        "comingSoon": "실시간 트래픽 모니터링은 준비 중입니다."
+      },
+      "headroom": {
+        "title": "인스턴스 배치 여유",
+        "description": "여유 리소스가 많은 순으로 VM 배치에 유리한 노드를 보여줍니다.",
+        "noData": "메트릭이 수집된 노드가 없습니다.",
+        "rank": "#",
+        "node": "노드",
+        "freeRam": "여유 메모리",
+        "freeCpu": "여유 CPU"
       }
     },
     "users": {

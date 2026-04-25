@@ -88,7 +88,7 @@ export function SemaphoreConfigSection({ configs, onSaved, t }: Props) {
     if (pb) setPlaybook(pb);
     const eid = configs.SEMAPHORE?.find(c => c.key === "semaphore.environment.id")?.value;
     if (eid) setSelectedEnvId(parseInt(eid, 10));
-  }, [configs]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [configs]);
 
   function handleFieldChange(key: string, value: string) {
     setFieldValues(prev => ({ ...prev, [key]: value }));

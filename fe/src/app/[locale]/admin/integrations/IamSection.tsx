@@ -134,30 +134,59 @@ export function IamConfigSection({ configs, onSaved, t }: IamConfigSectionProps)
   const fields = IAM_PROVIDER_FIELDS[provider] ?? [];
 
   return (
-    <div className="bg-white rounded-lg border overflow-hidden">
+    <div style={{
+      background: "var(--bg-surface)",
+      border: "1px solid var(--border-1)",
+      borderRadius: "var(--r-md)",
+      overflow: "hidden",
+    }}>
       <div
-        className="px-4 py-3 border-b bg-gray-50 flex items-center justify-between cursor-pointer select-none hover:bg-gray-100"
+        style={{
+          padding: "10px 16px",
+          borderBottom: collapsed ? "none" : "1px solid var(--border-1)",
+          background: "var(--bg-subtle)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          cursor: "pointer",
+          userSelect: "none",
+        }}
         onClick={() => setCollapsed((v) => !v)}
       >
-        <div className="flex items-center gap-2">
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <ChevronIcon collapsed={collapsed} />
-          <span className="text-sm font-semibold text-gray-900">IAM</span>
-          <span className="text-xs text-gray-500">{t.descriptions["IAM"]}</span>
+          <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--fg-primary)" }}>IAM</span>
+          <span style={{ fontSize: "11px", color: "var(--fg-muted)" }}>{t.descriptions["IAM"]}</span>
           {dirty && (
-            <span className="text-xs bg-yellow-50 text-yellow-700 border border-yellow-200 px-1.5 py-0.5 rounded">
+            <span style={{
+              fontSize: "11px",
+              background: "var(--warn-50)",
+              color: "var(--warn-600)",
+              border: "1px solid var(--warn-50)",
+              padding: "2px 6px",
+              borderRadius: "var(--r-xs)",
+            }}>
               {ti.unsaved}
             </span>
           )}
         </div>
-        <span className="text-xs text-gray-400">IAM</span>
+        <span style={{ fontSize: "11px", color: "var(--fg-disabled)", fontFamily: "var(--font-mono)" }}>IAM</span>
       </div>
 
       {!collapsed && (
-        <div className="p-4">
-          <div className="flex items-center gap-4 mb-4">
-            <label className="text-xs text-gray-600 font-medium w-40 shrink-0">{ti.providerLabel}</label>
+        <div style={{ padding: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>
+            <label style={{ fontSize: "12px", color: "var(--fg-secondary)", fontWeight: 500, width: 160, flexShrink: 0 }}>{ti.providerLabel}</label>
             <select
-              className="border rounded px-2 py-1.5 text-xs bg-white"
+              style={{
+                border: "1px solid var(--border-1)",
+                borderRadius: "var(--r-xs)",
+                padding: "4px 8px",
+                fontSize: "12px",
+                background: "var(--bg-surface)",
+                color: "var(--fg-primary)",
+                outline: "none",
+              }}
               value={provider}
               onChange={(e) => handleProviderChange(e.target.value as IamProviderKey)}
             >
@@ -177,18 +206,18 @@ export function IamConfigSection({ configs, onSaved, t }: IamConfigSectionProps)
           {testResult && <TestResultBox result={testResult} passedMsg={ti.testPassed} failedMsg={ti.testFailed} />}
 
           {savedMsg && (
-            <p className={`text-xs mb-3 ${savedMsg.ok ? "text-green-700" : "text-red-600"}`}>
+            <p style={{ fontSize: "12px", marginBottom: 12, color: savedMsg.ok ? "var(--ok-600)" : "var(--danger-600)" }}>
               {savedMsg.ok ? `✓ ${savedMsg.msg}` : `✗ ${savedMsg.msg}`}
             </p>
           )}
 
-          <div className="flex gap-2">
+          <div style={{ display: "flex", gap: 8 }}>
             {provider !== "none" && (
-              <Button variant="default" className="text-xs px-3 py-1.5" onClick={handleTest} disabled={testing || saving}>
+              <Button variant="default" size="sm" onClick={handleTest} disabled={testing || saving}>
                 {testing ? ti.testing : ti.testBtn}
               </Button>
             )}
-            <Button variant="default" className="text-xs px-3 py-1.5" onClick={handleSave} disabled={saving || testing}>
+            <Button variant="default" size="sm" onClick={handleSave} disabled={saving || testing}>
               {saving ? ti.saving : ti.saveBtn}
             </Button>
           </div>

@@ -5,6 +5,8 @@ import { Button, Tabs, TabPanel, Tab, TabList, NotificationBanner, ConfirmModal 
 import Layout from "@/components/Layout/Layout";
 import { useAdminProtection } from "@/hooks/useAdminProtection";
 import { useMsg } from "@/providers/MessagesProvider";
+import { PageHeader } from "@/components/ui/page-header";
+import { Card, CardHead, CardBody } from "@/components/ui/card";
 
 // ─── 타입 ────────────────────────────────────────────────────────────────────
 
@@ -121,47 +123,56 @@ function NewsTab() {
     await fetchNews();
   }
 
-  const inputCls = "w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500";
-  const labelCls = "block text-xs font-medium text-gray-600 mb-1";
+  const inputStyle: React.CSSProperties = {
+    width: "100%", border: "1px solid var(--border-2)", borderRadius: "var(--r-sm)",
+    padding: "6px 10px", fontSize: "13px", color: "var(--fg-primary)",
+    background: "var(--bg-surface)", outline: "none",
+  };
+  const labelStyle: React.CSSProperties = {
+    display: "block", fontSize: "12px", fontWeight: 500, color: "var(--fg-secondary)", marginBottom: 4,
+  };
 
   if (creating) {
     return (
-      <div className="mt-3">
-        <button onClick={() => setCreating(false)} className="text-sm text-gray-500 hover:text-gray-800 mb-4">{t.backToList}</button>
-        <div className="bg-white rounded-lg border overflow-hidden">
-          <div className="px-5 py-3 border-b bg-gray-50">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{editing ? t.editTitle : t.createTitle}</p>
-          </div>
-          <div className="px-5 py-4 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
-                <label className={labelCls}>{t.fields.title} <span className="text-red-500">*</span></label>
-                <input type="text" className={inputCls} value={form.title}
+      <div style={{ marginTop: 12 }}>
+        <button
+          onClick={() => setCreating(false)}
+          style={{ fontSize: "12.5px", color: "var(--fg-muted)", background: "none", border: "none", cursor: "pointer", marginBottom: 12, padding: 0 }}
+        >
+          ← {t.backToList}
+        </button>
+        <Card>
+          <CardHead title={editing ? t.editTitle : t.createTitle} />
+          <CardBody>
+            <div style={{ display: "grid", gap: 16 }}>
+              <div>
+                <label style={labelStyle}>{t.fields.title} <span style={{ color: "var(--danger-600)" }}>*</span></label>
+                <input type="text" style={inputStyle} value={form.title}
                   onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
               </div>
-              <div className="col-span-2 flex items-end gap-4">
-                <div className="flex-1">
-                  <label className={labelCls}>{t.fields.category}</label>
-                  <select className={inputCls} value={form.category}
+              <div style={{ display: "flex", gap: 16, alignItems: "flex-end" }}>
+                <div style={{ flex: 1 }}>
+                  <label style={labelStyle}>{t.fields.category}</label>
+                  <select style={inputStyle} value={form.category}
                     onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}>
                     {t.categories.map((c) => <option key={c}>{c}</option>)}
                   </select>
                 </div>
-                <div className="flex items-center gap-2 pb-2">
+                <div style={{ display: "flex", alignItems: "center", gap: 8, paddingBottom: 2 }}>
                   <input type="checkbox" id="published" checked={form.published}
                     onChange={(e) => setForm((f) => ({ ...f, published: e.target.checked }))} />
-                  <label htmlFor="published" className="text-sm text-gray-700">{t.fields.published}</label>
+                  <label htmlFor="published" style={{ fontSize: "13px", color: "var(--fg-secondary)" }}>{t.fields.published}</label>
                 </div>
               </div>
-              <div className="col-span-2">
-                <label className={labelCls}>{t.fields.content}</label>
-                <textarea className={`${inputCls} h-32 resize-none`} value={form.content}
+              <div>
+                <label style={labelStyle}>{t.fields.content}</label>
+                <textarea style={{ ...inputStyle, height: 128, resize: "none" }} value={form.content}
                   onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))} />
               </div>
             </div>
-          </div>
-        </div>
-        <div className="flex gap-2 mt-4">
+          </CardBody>
+        </Card>
+        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
           <Button variant="default" size="sm" onClick={handleSave} disabled={saving || !form.title.trim()}>
             {saving ? t.saving : t.save}
           </Button>
@@ -172,43 +183,43 @@ function NewsTab() {
   }
 
   return (
-    <div className="mt-3">
-      <div className="flex justify-end mb-3">
+    <div style={{ marginTop: 12 }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
         <Button variant="default" size="sm" onClick={openCreate}>{t.add}</Button>
       </div>
-      <div className="bg-white rounded-lg border overflow-hidden">
+      <Card>
         {loading ? (
-          <div className="text-center py-10 text-sm text-gray-400">{t.loading}</div>
+          <CardBody style={{ textAlign: "center", padding: "40px 16px", color: "var(--fg-muted)", fontSize: "13px" }}>{t.loading}</CardBody>
         ) : items.length === 0 ? (
-          <div className="text-center py-10 text-sm text-gray-400">{t.empty}</div>
+          <CardBody style={{ textAlign: "center", padding: "40px 16px", color: "var(--fg-muted)", fontSize: "13px" }}>{t.empty}</CardBody>
         ) : (
-          <table className="w-full text-sm">
+          <table style={{ width: "100%", fontSize: "13px", borderCollapse: "collapse" }}>
             <thead>
-              <tr className="text-xs text-gray-500 border-b bg-gray-50">
-                <th className="text-left px-4 py-2 font-medium">{t.columns.title}</th>
-                <th className="text-left px-4 py-2 font-medium w-32">{t.columns.category}</th>
-                <th className="text-left px-4 py-2 font-medium w-20">{t.columns.published}</th>
-                <th className="text-left px-4 py-2 font-medium w-32">{t.columns.createdAt}</th>
-                <th className="px-4 py-2 w-24" />
+              <tr style={{ fontSize: "12px", color: "var(--fg-muted)", borderBottom: "1px solid var(--border-1)", background: "var(--bg-subtle)" }}>
+                <th style={{ textAlign: "left", padding: "8px 16px", fontWeight: 500 }}>{t.columns.title}</th>
+                <th style={{ textAlign: "left", padding: "8px 16px", fontWeight: 500, width: 128 }}>{t.columns.category}</th>
+                <th style={{ textAlign: "left", padding: "8px 16px", fontWeight: 500, width: 80 }}>{t.columns.published}</th>
+                <th style={{ textAlign: "left", padding: "8px 16px", fontWeight: 500, width: 128 }}>{t.columns.createdAt}</th>
+                <th style={{ padding: "8px 16px", width: 96 }} />
               </tr>
             </thead>
             <tbody>
               {items.map((item) => (
-                <tr key={item.id} className="border-b last:border-b-0 hover:bg-gray-50/50">
-                  <td className="px-4 py-2.5 text-gray-800">{item.title}</td>
-                  <td className="px-4 py-2.5">
-                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded whitespace-nowrap">{item.category}</span>
+                <tr key={item.id} style={{ borderBottom: "1px solid var(--border-1)" }} className="news-row">
+                  <td style={{ padding: "10px 16px", color: "var(--fg-primary)" }}>{item.title}</td>
+                  <td style={{ padding: "10px 16px" }}>
+                    <span style={{ fontSize: "11.5px", background: "var(--neutral-50)", color: "var(--neutral-600)", padding: "2px 8px", borderRadius: "var(--r-xs)", whiteSpace: "nowrap" }}>{item.category}</span>
                   </td>
-                  <td className="px-4 py-2.5">
-                    <span className={`text-xs font-medium ${item.published ? "text-green-600" : "text-gray-400"}`}>
+                  <td style={{ padding: "10px 16px" }}>
+                    <span style={{ fontSize: "12px", fontWeight: 500, color: item.published ? "var(--ok-600)" : "var(--fg-muted)" }}>
                       {item.published ? t.status.visible : t.status.hidden}
                     </span>
                   </td>
-                  <td className="px-4 py-2.5 text-xs text-gray-400">
+                  <td style={{ padding: "10px 16px", fontSize: "12px", color: "var(--fg-muted)" }}>
                     {new Date(item.createdAt).toLocaleDateString()}
                   </td>
-                  <td className="px-4 py-2.5 text-right">
-                    <div className="flex gap-1 justify-end">
+                  <td style={{ padding: "10px 16px", textAlign: "right" }}>
+                    <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
                       <Button variant="outline" size="sm" onClick={() => openEdit(item)}>{t.actions.edit}</Button>
                       <Button variant="destructive" size="sm" onClick={() => setDeleteTarget(item)}>{t.actions.delete}</Button>
                     </div>
@@ -218,7 +229,8 @@ function NewsTab() {
             </tbody>
           </table>
         )}
-      </div>
+      </Card>
+      <style>{`.news-row:last-child { border-bottom: none; } .news-row:hover { background: var(--bg-hover); }`}</style>
 
       <ConfirmModal
         open={!!deleteTarget}
@@ -274,50 +286,51 @@ function BannerTab() {
     } finally { setSaving(false); }
   }
 
-  const inputCls = "w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500";
+  const inputStyle: React.CSSProperties = {
+    width: "100%", border: "1px solid var(--border-2)", borderRadius: "var(--r-sm)",
+    padding: "6px 10px", fontSize: "13px", color: "var(--fg-primary)",
+    background: "var(--bg-surface)", outline: "none",
+  };
+  const labelStyle: React.CSSProperties = {
+    display: "block", fontSize: "12px", fontWeight: 500, color: "var(--fg-secondary)", marginBottom: 4,
+  };
 
   return (
-    <div className="mt-3 space-y-4">
-      {/* 미리보기 */}
-      <div className="bg-white rounded-lg border overflow-hidden">
-        <div className="px-5 py-3 border-b bg-gray-50">
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{t.preview}</p>
-        </div>
-        <div className="px-5 py-4">
+    <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 16 }}>
+      <Card>
+        <CardHead title={t.preview} />
+        <CardBody>
           {message ? (
             <NotificationBanner linkLabel={compMsg.Banner.linkLabel} linkHref={link || undefined} preview>
               {message}
             </NotificationBanner>
           ) : (
-            <p className="text-sm text-gray-400">{t.previewEmpty}</p>
+            <p style={{ margin: 0, fontSize: "13px", color: "var(--fg-muted)" }}>{t.previewEmpty}</p>
           )}
-        </div>
-      </div>
+        </CardBody>
+      </Card>
 
-      {/* 설정 */}
-      <div className="bg-white rounded-lg border overflow-hidden">
-        <div className="px-5 py-3 border-b bg-gray-50">
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{t.settings}</p>
-        </div>
-        <div className="px-5 py-4 space-y-4">
+      <Card>
+        <CardHead title={t.settings} />
+        <CardBody style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">{t.messageLabel}</label>
-            <textarea className={`${inputCls} h-20 resize-none`} value={message}
+            <label style={labelStyle}>{t.messageLabel}</label>
+            <textarea style={{ ...inputStyle, height: 80, resize: "none" }} value={message}
               onChange={(e) => setMessage(e.target.value)} placeholder={t.messagePlaceholder} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">{t.linkLabel}</label>
-            <input type="text" className={inputCls} value={link}
+            <label style={labelStyle}>{t.linkLabel}</label>
+            <input type="text" style={inputStyle} value={link}
               onChange={(e) => setLink(e.target.value)} placeholder="https://..." />
           </div>
-        </div>
-      </div>
+        </CardBody>
+      </Card>
 
-      <div className="flex items-center gap-3">
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <Button variant="default" size="sm" onClick={handleApply} disabled={saving}>
           {saving ? t.applying : t.apply}
         </Button>
-        {saved && <span className="text-sm text-green-600">{t.saved}</span>}
+        {saved && <span style={{ fontSize: "13px", color: "var(--ok-600)" }}>{t.saved}</span>}
       </div>
     </div>
   );
@@ -334,17 +347,10 @@ export default function SettingsPage() {
 
   return (
     <Layout navDomain="Nav" sidebarDomain="Admin">
-      <main className="p-3 gap-3">
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold text-gray-700 mb-2">{t.title}</h2>
-          <hr />
-        </div>
+      <PageHeader title={t.title} subtitle={t.sub_title_1} />
 
-        <div className="mt-3">
-          <h2 className="text-lg font-semibold text-gray-700 mb-2">{t.sub_title_1}</h2>
-        </div>
-
-        <div className="mt-3 p-4 border rounded-lg shadow-sm bg-white">
+      <Card>
+        <CardBody style={{ padding: "16px" }}>
           <Tabs defaultTab="news">
             <TabList>
               <Tab id="news">{t.tabs.tab_1.title}</Tab>
@@ -359,8 +365,8 @@ export default function SettingsPage() {
               <BannerTab />
             </TabPanel>
           </Tabs>
-        </div>
-      </main>
+        </CardBody>
+      </Card>
     </Layout>
   );
 }

@@ -161,24 +161,43 @@
     "monitoring": {
       "title": "Monitoring",
       "sub_title_1": "Logs & Reports",
+      "clusterTitle": "Cluster",
       "nodeMetrics": {
-        "title": "Node Metrics",
+        "title": "Metrics",
         "description": "Real-time resource usage collected from Proxmox nodes via API.",
         "refresh": "Refresh",
         "loading": "Loading...",
         "empty": "No nodes registered.",
-        "noMetrics": "No metrics yet",
+        "noMetrics": "No metrics yet (waiting for poll)",
         "noCredentials": "No API credentials",
         "lastUpdated": "Updated",
         "cpu": "CPU",
-        "mem": "Memory",
-        "disk": "Disk",
+        "mem": "MEM",
+        "disk": "DISK",
         "status": {
           "ACTIVE": "Active",
           "ISOLATED": "Isolated",
           "MAINTENANCE": "Maintenance",
           "OFFLINE": "Offline"
         }
+      },
+      "topology": {
+        "title": "Topology",
+        "description": "Cluster node layout and connectivity."
+      },
+      "traffic": {
+        "title": "Real-time Traffic",
+        "description": "Network I/O monitoring",
+        "comingSoon": "Real-time traffic monitoring is coming soon."
+      },
+      "headroom": {
+        "title": "Instance Placement Headroom",
+        "description": "Nodes ranked by available resources — best candidates for VM placement.",
+        "noData": "No nodes with collected metrics.",
+        "rank": "#",
+        "node": "Node",
+        "freeRam": "Free RAM",
+        "freeCpu": "Free CPU"
       }
     },
     "users": {

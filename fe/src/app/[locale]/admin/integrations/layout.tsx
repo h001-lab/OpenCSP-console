@@ -2,10 +2,11 @@
 
 import { usePathname } from "next/navigation";
 import Layout from "@/components/Layout/Layout";
-import { Link, useMsg } from "@/providers/MessagesProvider";
+import { Link } from "@/providers/MessagesProvider";
 import { useAdminProtection } from "@/hooks/useAdminProtection";
 import { useTypedMsg } from "@/hooks/useTypedMsg";
 import { IntegrationsMessages } from "./types";
+import { PageHeader } from "@/components/ui/page-header";
 
 interface AdminMsg {
   integrations: IntegrationsMessages;
@@ -28,34 +29,35 @@ export default function IntegrationsLayout({ children }: { children: React.React
 
   return (
     <Layout navDomain="Nav" sidebarDomain="Admin">
-      <main className="p-3 gap-3">
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold text-gray-700 mb-1">{t.title}</h2>
-          <p className="text-xs text-gray-500">{t.description}</p>
-          <hr className="mt-2" />
-        </div>
+      <PageHeader title={t.title} subtitle={t.description} />
 
-        <div className="flex gap-0 border-b mb-4">
-          {TABS.map(tab => {
-            const isActive = pathname.endsWith(`/integrations/${tab.key}`);
-            return (
-              <Link
-                key={tab.key}
-                href={tab.href}
-                className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-                  isActive
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                {t.tabs[tab.key]}
-              </Link>
-            );
-          })}
-        </div>
+      <div style={{ display: "flex", borderBottom: "1px solid var(--border-1)", marginBottom: "20px" }}>
+        {TABS.map(tab => {
+          const isActive = pathname.endsWith(`/integrations/${tab.key}`);
+          return (
+            <Link
+              key={tab.key}
+              href={tab.href}
+              style={{
+                padding: "8px 16px",
+                fontSize: "13px",
+                fontWeight: isActive ? 600 : 400,
+                color: isActive ? "var(--brand-600)" : "var(--fg-muted)",
+                textDecoration: "none",
+                borderBottom: isActive ? "2px solid var(--brand-600)" : "2px solid transparent",
+                marginBottom: "-1px",
+                transition: "color 150ms",
+              }}
+              className="integrations-tab"
+            >
+              {t.tabs[tab.key]}
+            </Link>
+          );
+        })}
+      </div>
+      <style>{`.integrations-tab:hover { color: var(--fg-primary) !important; }`}</style>
 
-        {children}
-      </main>
+      {children}
     </Layout>
   );
 }

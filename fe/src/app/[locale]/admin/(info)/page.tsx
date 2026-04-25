@@ -4,6 +4,8 @@ import Layout from "@/components/Layout/Layout";
 import { useAutoMsg } from "@/providers/MessagesProvider";
 import { InfoPageMessage } from "../types";
 import { useAdminProtection } from "@/hooks/useAdminProtection";
+import { PageHeader } from "@/components/ui/page-header";
+import { Card, CardHead, CardBody } from "@/components/ui/card";
 
 export default function Page() {
 	const isAdmin = useAdminProtection();
@@ -13,28 +15,19 @@ export default function Page() {
 
 	return (
 		<Layout navDomain="Nav" sidebarDomain="Admin">
-			<main className="p-3 gap-3">
-				<div className="mb-6">
-					<h2 className="text-lg font-semibold text-gray-700 mb-2">
-						{t.title || "Information"}
-					</h2>
-					<hr />
-				</div>
-				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-					<div className="p-4 border rounded-lg shadow-sm">
-						<h2 className="text-lg font-medium mb-2">{t.info[0].label}</h2>
-						<p>{t.info[0].description || ""}</p>
-					</div>
-					<div className="p-4 border rounded-lg shadow-sm">
-						<h2 className="text-lg font-medium mb-2">{t.info[1].label}</h2>
-						<p>{t.info[1].description || ""}</p>
-					</div>
-					<div className="p-4 border rounded-lg shadow-sm">
-						<h2 className="text-lg font-medium mb-2">{t.info[2].label}</h2>
-						<p>{t.info[2].description || ""}</p>
-					</div>
-				</div>
-			</main>
+			<PageHeader title={t.title || "Information"} />
+			<div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
+				{t.info.map((item) => (
+					<Card key={item.label}>
+						<CardHead title={item.label} />
+						<CardBody>
+							<p style={{ margin: 0, fontSize: "13px", color: "var(--fg-secondary)", lineHeight: 1.6 }}>
+								{item.description || ""}
+							</p>
+						</CardBody>
+					</Card>
+				))}
+			</div>
 		</Layout>
 	);
 }
