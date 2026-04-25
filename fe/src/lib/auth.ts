@@ -42,7 +42,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       checks: ["pkce"],
       authorization: {
         params: {
-          scope: `openid email profile offline_access urn:zitadel:iam:org:project:id:zitadel:aud urn:zitadel:iam:org:project:id:${process.env.ZITADEL_PROJECT_ID}:aud`,
+          scope: [
+            "openid",
+            "email",
+            "profile",
+            "offline_access",
+            `urn:zitadel:iam:org:project:id:zitadel:aud`,
+            `urn:zitadel:iam:org:project:id:${process.env.ZITADEL_PROJECT_ID}:aud`,
+            ...(process.env.ZITADEL_ORG_ID ? [`urn:zitadel:iam:org:id:${process.env.ZITADEL_ORG_ID}`] : []),
+          ].join(" "),
         },
       },
     }),
@@ -116,7 +124,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const urlObj = new URL(url, baseUrl);
         const idToken = urlObj.searchParams.get("id_token_hint");
         const endSessionUrl = new URL(`${issuer}/oidc/v1/end_session`);
-        endSessionUrl.searchParams.append("post_logout_redirect_uri", baseUrl.replace(/\/$/, ""));
+        // NEXTAUTH_URL을 우선 사용해야 프록시/K8s 환경에서 실제 공개 URL이 전달됨
+        const publicBase = (process.env.NEXTAUTH_URL || baseUrl).replace(/\/$/, "");
+        endSessionUrl.searchParams.append("post_logout_redirect_uri", publicBase);
         
         if (idToken) {
           endSessionUrl.searchParams.append("id_token_hint", idToken);
