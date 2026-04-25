@@ -41,7 +41,7 @@ public class AppConfig {
     private String key;
 
     /** sensitive=true 이면 AES 암호화 저장 */
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "config_value", columnDefinition = "TEXT")
     @Convert(converter = EncryptedStringConverter.class)
     private String value;
 

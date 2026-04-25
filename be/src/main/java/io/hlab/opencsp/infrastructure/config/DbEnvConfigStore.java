@@ -123,7 +123,7 @@ public class DbEnvConfigStore implements ConfigStore {
             case IAM       -> key;                      // e.g. zitadel.issuer-uri
             case K8S       -> "app.k8s." + key;         // e.g. app.k8s.enabled
             case AI        -> "spring.ai." + key;       // e.g. spring.ai.openai.api-key
-            case SEMAPHORE -> "semaphore." + key;
+            case SEMAPHORE -> key;
             case PROVISION -> "app.provision." + key;   // e.g. app.provision.history-retention-days
             case BILLING   -> "billing." + key;          // e.g. billing.lago.url
             case GENERAL   -> "app." + key;
