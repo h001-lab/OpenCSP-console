@@ -6,6 +6,7 @@ import { Button, Tag, ConfirmModal } from "@h001/ui";
 import AdminListPanel from "@/components/admin/AdminListPanel";
 import { useAdminProtection } from "@/hooks/useAdminProtection";
 import { useMsg } from "@/providers/MessagesProvider";
+import { PageHeader } from "@/components/ui/page-header";
 
 // Types and Interfaces
 type ProvisionStatus =
@@ -181,18 +182,17 @@ export default function InfrastructurePage() {
 
   return (
     <Layout navDomain="Nav" sidebarDomain="Admin">
-      <main className="p-4 gap-4">
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold text-gray-700 mb-1">{t.title}</h2>
-          <p className="text-xs text-gray-500">{t.description}</p>
-          <hr className="mt-2" />
-        </div>
+      <PageHeader title={t.title} subtitle={t.description} />
 
-        {syncMsg && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-800">
-            {syncMsg}
-          </div>
-        )}
+      {syncMsg && (
+        <div style={{
+          background: "var(--info-50)", border: "1px solid var(--brand-100)",
+          borderRadius: "var(--r-md)", padding: "10px 14px", marginBottom: "16px",
+          fontSize: "13px", color: "var(--info-600)",
+        }}>
+          {syncMsg}
+        </div>
+      )}
 
         <AdminListPanel
           title={panelTitle}
@@ -205,37 +205,37 @@ export default function InfrastructurePage() {
           loadingText={t.loading}
         >
           {filtered.length === 0 ? (
-            <div className="text-center py-16 text-sm text-gray-400">{t.empty}</div>
+            <div style={{ textAlign: "center", padding: "64px 16px", fontSize: "13px", color: "var(--fg-muted)" }}>{t.empty}</div>
           ) : (
-            <table className="w-full text-sm">
+            <table style={{ width: "100%", fontSize: "13px", borderCollapse: "collapse" }}>
               <thead>
-                <tr className="text-xs text-gray-500 border-b bg-gray-50/50">
-                  <th className="text-left px-4 py-2 font-medium">{t.columns.crName}</th>
-                  <th className="text-left px-4 py-2 font-medium">{t.columns.module}</th>
-                  <th className="text-left px-4 py-2 font-medium">{t.columns.user}</th>
-                  <th className="text-left px-4 py-2 font-medium">{t.columns.status}</th>
-                  <th className="text-left px-4 py-2 font-medium">{t.columns.updated}</th>
-                  <th className="px-4 py-2 w-20" />
+                <tr style={{ fontSize: "12px", color: "var(--fg-muted)", borderBottom: "1px solid var(--border-1)", background: "var(--bg-subtle)" }}>
+                  <th style={{ textAlign: "left", padding: "8px 16px", fontWeight: 500 }}>{t.columns.crName}</th>
+                  <th style={{ textAlign: "left", padding: "8px 16px", fontWeight: 500 }}>{t.columns.module}</th>
+                  <th style={{ textAlign: "left", padding: "8px 16px", fontWeight: 500 }}>{t.columns.user}</th>
+                  <th style={{ textAlign: "left", padding: "8px 16px", fontWeight: 500 }}>{t.columns.status}</th>
+                  <th style={{ textAlign: "left", padding: "8px 16px", fontWeight: 500 }}>{t.columns.updated}</th>
+                  <th style={{ padding: "8px 16px", width: 80 }} />
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((item) => (
-                  <tr key={item.id} className="border-b last:border-b-0 hover:bg-gray-50/50">
-                    <td className="px-4 py-2.5 font-mono text-xs font-semibold text-gray-700">
+                  <tr key={item.id} style={{ borderBottom: "1px solid var(--border-1)" }} className="infra-row">
+                    <td style={{ padding: "10px 16px", fontFamily: "var(--font-mono)", fontSize: "12px", fontWeight: 600, color: "var(--fg-primary)" }}>
                       {item.crName}
                       {item.vmHostname && (
-                        <div className="text-gray-400 font-sans font-normal">{item.vmHostname}</div>
+                        <div style={{ fontFamily: "var(--font-sans)", fontWeight: 400, color: "var(--fg-muted)" }}>{item.vmHostname}</div>
                       )}
                     </td>
-                    <td className="px-4 py-2.5 text-xs text-gray-600">{item.moduleType}</td>
-                    <td className="px-4 py-2.5 text-xs text-gray-600 max-w-32 truncate">{item.userId}</td>
-                    <td className="px-4 py-2.5">
+                    <td style={{ padding: "10px 16px", fontSize: "12px", color: "var(--fg-secondary)" }}>{item.moduleType}</td>
+                    <td style={{ padding: "10px 16px", fontSize: "12px", color: "var(--fg-secondary)", maxWidth: 128, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.userId}</td>
+                    <td style={{ padding: "10px 16px" }}>
                       <Tag type={statusTagType(item.status)}>{item.status}</Tag>
                     </td>
-                    <td className="px-4 py-2.5 text-xs text-gray-400">
+                    <td style={{ padding: "10px 16px", fontSize: "12px", color: "var(--fg-muted)" }}>
                       {new Date(item.updatedAt).toLocaleString()}
                     </td>
-                    <td className="px-4 py-2.5 text-right">
+                    <td style={{ padding: "10px 16px", textAlign: "right" }}>
                       <Button variant="destructive" size="sm" onClick={() => setConfirmDelete(item)}>
                         {t.delete}
                       </Button>
@@ -246,7 +246,6 @@ export default function InfrastructurePage() {
             </table>
           )}
         </AdminListPanel>
-      </main>
 
       <ConfirmModal
         open={confirmSync}

@@ -16,8 +16,9 @@ export default function CorePage() {
   const t = adminMsg?.integrations;
 
   const cfg = useConfigs(t?.saveFailed ?? "", t?.deleteConfirm ?? "");
+  const { fetchConfigs } = cfg;
 
-  useEffect(() => { cfg.fetchConfigs(); }, [cfg.fetchConfigs]);
+  useEffect(() => { fetchConfigs(); }, [fetchConfigs]);
 
   if (!t) return null;
 

@@ -3,7 +3,14 @@ import { FieldMeta, TestResult } from "./types";
 export function ChevronIcon({ collapsed }: { collapsed: boolean }) {
   return (
     <svg
-      className={`h-4 w-4 text-gray-400 transition-transform ${collapsed ? "-rotate-90" : ""}`}
+      style={{
+        width: 16,
+        height: 16,
+        color: "var(--fg-muted)",
+        flexShrink: 0,
+        transition: "transform 200ms ease",
+        transform: collapsed ? "rotate(-90deg)" : "rotate(0deg)",
+      }}
       fill="none" viewBox="0 0 24 24" stroke="currentColor"
     >
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -12,14 +19,22 @@ export function ChevronIcon({ collapsed }: { collapsed: boolean }) {
 }
 
 export function TestResultBox({ result, passedMsg, failedMsg }: { result: TestResult; passedMsg: string; failedMsg: string }) {
+  const isOk = result.success;
   return (
-    <div className={`rounded p-3 text-xs mb-3 ${result.success ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"}`}>
-      <p className={`font-semibold mb-1 ${result.success ? "text-green-800" : "text-red-800"}`}>
-        {result.success ? `✓ ${passedMsg}` : `✗ ${failedMsg}`}
+    <div style={{
+      borderRadius: "var(--r-sm)",
+      padding: "10px 12px",
+      marginBottom: 12,
+      fontSize: "12px",
+      background: isOk ? "var(--ok-50)" : "var(--danger-50)",
+      border: `1px solid ${isOk ? "var(--ok-50)" : "var(--danger-50)"}`,
+    }}>
+      <p style={{ fontWeight: 600, marginBottom: 4, color: isOk ? "var(--ok-600)" : "var(--danger-600)" }}>
+        {isOk ? `✓ ${passedMsg}` : `✗ ${failedMsg}`}
       </p>
       {result.steps.map((step, i) => (
-        <p key={i} className={step.success ? "text-green-700" : "text-red-700"}>
-          {step.success ? "✓" : "✗"} <span className="font-medium">{step.name}:</span> {step.message}
+        <p key={i} style={{ margin: "1px 0", color: step.success ? "var(--ok-600)" : "var(--danger-600)" }}>
+          {step.success ? "✓" : "✗"} <span style={{ fontWeight: 500 }}>{step.name}:</span> {step.message}
         </p>
       ))}
     </div>
@@ -43,12 +58,17 @@ export function FieldTable({
 }) {
   if (fields.length === 0) return null;
   return (
-    <div className="border rounded overflow-hidden mb-4">
-      <table className="w-full text-sm">
+    <div style={{
+      border: "1px solid var(--border-1)",
+      borderRadius: "var(--r-sm)",
+      overflow: "hidden",
+      marginBottom: 16,
+    }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
         <thead>
-          <tr className="text-xs text-gray-500 border-b bg-gray-50/50">
-            <th className="text-left px-4 py-2 font-medium w-48">{keyColLabel}</th>
-            <th className="text-left px-4 py-2 font-medium">{valueColLabel}</th>
+          <tr style={{ borderBottom: "1px solid var(--border-1)", background: "var(--bg-subtle)" }}>
+            <th style={{ textAlign: "left", padding: "6px 16px", fontSize: "11px", fontWeight: 500, color: "var(--fg-muted)", width: 192 }}>{keyColLabel}</th>
+            <th style={{ textAlign: "left", padding: "6px 16px", fontSize: "11px", fontWeight: 500, color: "var(--fg-muted)" }}>{valueColLabel}</th>
           </tr>
         </thead>
         <tbody>
@@ -56,15 +76,26 @@ export function FieldTable({
             const val = fieldValues[field.key] ?? "";
             const isUnchanged = field.sensitive && val === "****";
             return (
-              <tr key={field.key} className="border-b last:border-b-0 hover:bg-gray-50/30">
-                <td className="px-4 py-2.5 text-gray-700 font-mono text-xs whitespace-nowrap">
+              <tr key={field.key} style={{ borderBottom: "1px solid var(--border-1)" }}>
+                <td style={{ padding: "8px 16px", color: "var(--fg-secondary)", fontFamily: "var(--font-mono)", fontSize: "12px", whiteSpace: "nowrap" }}>
                   {field.key}
-                  {field.description && <div className="text-gray-400 font-sans">{field.description}</div>}
+                  {field.description && <div style={{ color: "var(--fg-disabled)", fontFamily: "var(--font-sans)", marginTop: 2 }}>{field.description}</div>}
                 </td>
-                <td className="px-4 py-2.5">
+                <td style={{ padding: "8px 16px" }}>
                   <input
                     type={field.sensitive ? "password" : "text"}
-                    className="w-full border rounded px-2 py-1 text-xs font-mono"
+                    style={{
+                      width: "100%",
+                      border: "1px solid var(--border-1)",
+                      borderRadius: "var(--r-xs)",
+                      padding: "4px 8px",
+                      fontSize: "12px",
+                      fontFamily: "var(--font-mono)",
+                      background: "var(--bg-surface)",
+                      color: "var(--fg-primary)",
+                      outline: "none",
+                      boxSizing: "border-box",
+                    }}
                     value={isUnchanged ? "" : val}
                     placeholder={isUnchanged ? unchangedHint : ""}
                     onChange={(e) => onChange(field.key, e.target.value)}

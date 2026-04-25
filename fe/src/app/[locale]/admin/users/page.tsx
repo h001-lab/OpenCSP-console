@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Layout from "@/components/Layout/Layout";
 import { DenseTable, Button } from "@h001/ui";
 import { Column } from "@/components/types";
 import { useAdminProtection } from "@/hooks/useAdminProtection";
 import { useMsg } from "@/providers/MessagesProvider";
+import { PageHeader } from "@/components/ui/page-header";
+import { Card, CardHead, CardBody } from "@/components/ui/card";
+import { AlertCircle, Users } from "lucide-react";
 
 interface AdminUserResponse {
     id: string;
@@ -58,13 +61,7 @@ export default function UsersPage() {
     const [syncing, setSyncing] = useState(false);
     const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
 
-    useEffect(() => {
-        if (isAdmin) {
-            fetchUsers();
-        }
-    }, [isAdmin]);
-
-    async function fetchUsers() {
+    const fetchUsers = useCallback(async () => {
         if (!adminMsg) return;
         const t = adminMsg.users;
         try {
@@ -83,12 +80,17 @@ export default function UsersPage() {
             const data = await response.json();
             setUsers(data.data || []);
         } catch (err) {
-            console.error('Failed to fetch users:', err);
             setError(err instanceof Error ? err.message : t.unknownError);
         } finally {
             setLoading(false);
         }
-    }
+    }, [adminMsg]);
+
+    useEffect(() => {
+        if (isAdmin) {
+            fetchUsers();
+        }
+    }, [isAdmin, fetchUsers]);
 
     async function syncUsers() {
         if (!adminMsg) return;
@@ -137,89 +139,67 @@ export default function UsersPage() {
         { key: "syncedAt", label: t.columns.syncedAt,   width: "15%" },
     ];
 
+    const countLabel = error ? t.listTitle : t.totalTitle.replace("{count}", String(users.length));
+    const headerActions = (
+        <>
+            <Button variant="default" onClick={syncUsers} disabled={syncing} className="text-xs px-3 py-1.5">
+                {syncing ? t.syncing : t.syncBtn}
+            </Button>
+            <Button variant="default" onClick={fetchUsers} className="text-xs px-3 py-1.5">
+                {t.refresh}
+            </Button>
+        </>
+    );
+
     return (
         <Layout navDomain="Nav" sidebarDomain="Admin">
-            <main className="p-3 gap-3">
-                <div className="mb-4">
-                    <h2 className="text-lg font-semibold text-gray-700 mb-2">{t.title}</h2>
-                    <hr />
+            <PageHeader title={t.title} />
+
+            {syncResult && (
+                <div style={{
+                    background: "var(--ok-50)", border: "1px solid var(--ok-600)",
+                    borderRadius: "var(--r-md)", padding: "10px 14px", marginBottom: "16px",
+                    fontSize: "13px", color: "var(--ok-600)",
+                }}>
+                    {t.syncComplete
+                        .replace("{total}", String(syncResult.total))
+                        .replace("{created}", String(syncResult.created))
+                        .replace("{updated}", String(syncResult.updated))}
                 </div>
+            )}
 
-                {loading && (
-                    <div className="flex items-center justify-center py-12 bg-white rounded-lg border">
-                        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
-                        <span className="ml-3 text-sm text-gray-600">{t.loading}</span>
-                    </div>
-                )}
+            {loading ? (
+                <Card>
+                    <CardBody style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "48px 16px" }}>
+                        <div style={{ width: 24, height: 24, border: "2px solid var(--brand-600)", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
+                        <span style={{ marginLeft: 12, fontSize: "13px", color: "var(--fg-muted)" }}>{t.loading}</span>
+                    </CardBody>
+                </Card>
+            ) : (
+                <Card>
+                    <CardHead title={countLabel} actions={headerActions} />
 
-                {syncResult && (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
-                        <p className="text-sm text-green-800">
-                            {t.syncComplete
-                                .replace("{total}", String(syncResult.total))
-                                .replace("{created}", String(syncResult.created))
-                                .replace("{updated}", String(syncResult.updated))}
-                        </p>
-                    </div>
-                )}
-
-                {!loading && (
-                    <div className="bg-white rounded-lg border">
-                        <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
-                            <h3 className="text-sm font-semibold text-gray-900">
-                                {error
-                                    ? t.listTitle
-                                    : t.totalTitle.replace("{count}", String(users.length))}
-                            </h3>
-                            <div className="flex gap-2">
-                                <Button
-                                    variant="default"
-                                    onClick={syncUsers}
-                                    disabled={syncing}
-                                    className="text-xs px-3 py-1.5"
-                                >
-                                    {syncing ? t.syncing : t.syncBtn}
-                                </Button>
-                                <Button
-                                    variant="default"
-                                    onClick={fetchUsers}
-                                    className="text-xs px-3 py-1.5"
-                                >
-                                    {t.refresh}
-                                </Button>
-                            </div>
-                        </div>
-
-                        {error && (
-                            <div className="px-4 py-6 text-center">
-                                <svg className="mx-auto h-8 w-8 text-red-400 mb-2" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                                </svg>
-                                <p className="text-sm font-medium text-red-700">{error}</p>
-                                <p className="text-xs text-gray-500 mt-1">{t.errorHint}</p>
-                            </div>
-                        )}
-
-                        {!error && (
-                            <>
-                                <DenseTable<UserTableRow>
-                                    data={tableData}
-                                    columns={columns}
-                                />
-                                {users.length === 0 && (
-                                    <div className="text-center py-10">
-                                        <svg className="mx-auto h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                                        </svg>
-                                        <h3 className="mt-2 text-sm font-medium text-gray-900">{t.empty.title}</h3>
-                                        <p className="mt-1 text-sm text-gray-500">{t.empty.description}</p>
-                                    </div>
-                                )}
-                            </>
-                        )}
-                    </div>
-                )}
-            </main>
+                    {error ? (
+                        <CardBody style={{ textAlign: "center", padding: "32px 16px" }}>
+                            <AlertCircle size={28} style={{ color: "var(--danger-600)", margin: "0 auto 8px" }} />
+                            <p style={{ margin: 0, fontSize: "13px", fontWeight: 500, color: "var(--danger-600)" }}>{error}</p>
+                            <p style={{ margin: "4px 0 0", fontSize: "12px", color: "var(--fg-muted)" }}>{t.errorHint}</p>
+                        </CardBody>
+                    ) : (
+                        <>
+                            <DenseTable<UserTableRow> data={tableData} columns={columns} />
+                            {users.length === 0 && (
+                                <CardBody style={{ textAlign: "center", padding: "40px 16px" }}>
+                                    <Users size={32} style={{ color: "var(--fg-disabled)", margin: "0 auto 8px" }} />
+                                    <p style={{ margin: 0, fontSize: "13px", fontWeight: 500, color: "var(--fg-secondary)" }}>{t.empty.title}</p>
+                                    <p style={{ margin: "4px 0 0", fontSize: "12px", color: "var(--fg-muted)" }}>{t.empty.description}</p>
+                                </CardBody>
+                            )}
+                        </>
+                    )}
+                </Card>
+            )}
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </Layout>
     );
 }

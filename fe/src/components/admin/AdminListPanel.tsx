@@ -1,7 +1,6 @@
 "use client";
 
 import { ReactNode } from "react";
-import { Spinner } from "@h001/ui";
 
 interface AdminListPanelProps {
   title: string;
@@ -16,10 +15,6 @@ interface AdminListPanelProps {
   className?: string;
 }
 
-/**
- * 어드민 목록 페이지에서 공통으로 사용하는 카드 패널.
- * 헤더(타이틀 + 검색 + 액션 버튼) + 로딩/콘텐츠 영역으로 구성된다.
- */
 export default function AdminListPanel({
   title,
   actions,
@@ -30,29 +25,52 @@ export default function AdminListPanel({
   loading = false,
   loadingText = "Loading...",
   children,
-  className = "",
 }: AdminListPanelProps) {
   return (
-    <div className={`bg-white rounded-lg border overflow-hidden ${className}`}>
-      <div className="px-4 py-3 border-b bg-gray-50 flex items-center gap-2 flex-wrap">
-        <span className="text-sm font-semibold text-gray-900 whitespace-nowrap mr-1">{title}</span>
+    <div style={{
+      background: "var(--bg-surface)",
+      border: "1px solid var(--border-1)",
+      borderRadius: "var(--r-md)",
+      boxShadow: "var(--shadow-card)",
+      overflow: "hidden",
+    }}>
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+        flexWrap: "wrap",
+        padding: "10px 16px",
+        borderBottom: "1px solid var(--border-1)",
+        minHeight: "44px",
+      }}>
+        <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--fg-primary)", whiteSpace: "nowrap", marginRight: 4 }}>{title}</span>
         {filters}
         {onSearch && (
           <input
             type="text"
-            className="border rounded px-2 py-1 text-xs w-44"
+            style={{
+              border: "1px solid var(--border-2)",
+              borderRadius: "var(--r-sm)",
+              padding: "4px 8px",
+              fontSize: "12px",
+              width: "176px",
+              color: "var(--fg-primary)",
+              background: "var(--bg-surface)",
+              outline: "none",
+            }}
             placeholder={searchPlaceholder}
             value={searchValue ?? ""}
             onChange={(e) => onSearch(e.target.value)}
           />
         )}
-        <div className="flex items-center gap-2 ml-auto">{actions}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginLeft: "auto" }}>{actions}</div>
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-12 gap-3">
-          <Spinner size="md" />
-          <span className="text-sm text-gray-600">{loadingText}</span>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "48px 16px", gap: 12 }}>
+          <div style={{ width: 20, height: 20, border: "2px solid var(--brand-600)", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
+          <span style={{ fontSize: "13px", color: "var(--fg-muted)" }}>{loadingText}</span>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
       ) : (
         children
