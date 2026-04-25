@@ -122,6 +122,10 @@ public class AdminNodeController {
                     "CPU: %.1f%% (%d cores), Mem: %s / %s",
                     m.cpuUsagePercent(), m.cpuTotal(),
                     humanBytes(m.memUsed()), humanBytes(m.memTotal()))));
+            nodeService.updateMetrics(uuid,
+                    m.cpuUsagePercent(), m.cpuTotal(),
+                    m.memUsed(), m.memTotal(),
+                    m.diskUsed(), m.diskTotal());
             return ResponseEntity.ok(new TestResult(true, steps));
         } catch (Exception e) {
             steps.add(new TestStep("Connect", false, "연결 실패: " + e.getMessage()));

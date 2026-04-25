@@ -8,6 +8,7 @@ import io.hlab.opencsp.domain.provision.ProvisionRepository;
 import io.hlab.opencsp.infrastructure.semaphore.SemaphoreClient;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -65,22 +66,22 @@ public class AdminProvisionController {
 
         Integer taskId = provision.getSemaphoreTaskId();
         if (taskId == null || taskId < 0) {
-            return ApiResponse.success(Map.of(
-                    "status",  "not_triggered",
-                    "success", false,
-                    "output",  "",
-                    "taskId",  (Object) null
-            ));
+            Map<String, Object> notTriggered = new HashMap<>();
+            notTriggered.put("status",  "not_triggered");
+            notTriggered.put("success", false);
+            notTriggered.put("output",  "");
+            notTriggered.put("taskId",  null);
+            return ApiResponse.success(notTriggered);
         }
 
         SemaphoreClient.TaskResult result = semaphoreClient.getTaskResult(taskId);
-        return ApiResponse.success(Map.of(
-                "status",      result.status(),
-                "success",     result.success(),
-                "output",      result.output(),
-                "taskId",      taskId,
-                "templateId",  provision.getSemaphoreTemplateId(),
-                "inventoryId", provision.getSemaphoreInventoryId()
-        ));
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("status",      result.status());
+        resp.put("success",     result.success());
+        resp.put("output",      result.output());
+        resp.put("taskId",      taskId);
+        resp.put("templateId",  provision.getSemaphoreTemplateId());
+        resp.put("inventoryId", provision.getSemaphoreInventoryId());
+        return ApiResponse.success(resp);
     }
 }
