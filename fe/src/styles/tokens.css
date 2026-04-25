@@ -1,20 +1,109 @@
-/* styles/tokens.css */
+/* OpenCSP Console — Enterprise design tokens */
 :root {
-  /* Colors */
-  --color-bg: #f5f7fa;
-  --color-panel: #ffffff;
-  --color-border: #dce3ea;
-  --color-text: #1b1f23;
+  /* Brand */
+  --brand-600: #2457D6;
+  --brand-700: #1B44AE;
+  --brand-500: #3A6BE4;
+  --brand-50:  #EEF3FE;
+  --brand-100: #DCE6FC;
 
-  /* Radius */
-  --radius: 3px;
+  /* Surfaces */
+  --bg-app:      #F4F6F8;
+  --bg-section:  #FAFBFC;
+  --bg-surface:  #FFFFFF;
+  --bg-hover:    #F3F5F7;
+  --bg-active:   #EEF3FE;
+  --bg-subtle:   #F7F8FA;
+
+  /* Borders */
+  --border-1:      #E5E7EB;
+  --border-2:      #D9DCE1;
+  --border-strong: #B9BEC7;
+  --border-focus:  #2457D6;
+
+  /* Text */
+  --fg-primary:   #0F1419;
+  --fg-secondary: #3F4754;
+  --fg-muted:     #6B7280;
+  --fg-disabled:  #9CA3AF;
+  --fg-inverse:   #FFFFFF;
+  --fg-link:      #2457D6;
+
+  /* Status */
+  --ok-600:      #0E8A5F;
+  --ok-50:       #E7F6EF;
+  --warn-600:    #B45309;
+  --warn-50:     #FDF3E7;
+  --danger-600:  #B91C1C;
+  --danger-50:   #FDECEC;
+  --info-600:    #2457D6;
+  --info-50:     #EEF3FE;
+  --neutral-600: #4B5563;
+  --neutral-50:  #F3F4F6;
+
+  /* Radii */
+  --r-xs: 3px;
+  --r-sm: 4px;
+  --r-md: 6px;
+  --r-lg: 8px;
+
+  /* Shadows */
+  --shadow-pop:  0 1px 2px rgba(15,20,25,0.04), 0 4px 16px rgba(15,20,25,0.08), 0 0 0 1px rgba(15,20,25,0.06);
+  --shadow-card: 0 1px 2px rgba(15,20,25,0.04);
+
+  /* Density (compact default) */
+  --row-h:    36px;
+  --cell-py:  8px;
+  --cell-px:  12px;
+  --control-h: 32px;
+
+  /* Layout */
+  --topbar-h:           48px;
+  --crumb-h:            36px;
+  --sidebar-w:          224px;
+  --sidebar-w-collapsed: 52px;
 
   /* Typography */
-  --font-size: 13px;
-  --line-height: 1.3;
+  --font-sans: "IBM Plex Sans", "IBM Plex Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
 
-  /* Spacing */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
+:root[data-density="comfortable"] {
+  --row-h:    44px;
+  --cell-py:  12px;
+  --cell-px:  14px;
+  --control-h: 36px;
+}
+
+:root[data-theme="dark"] {
+  --bg-app:      #0C1014;
+  --bg-section:  #10151B;
+  --bg-surface:  #151B23;
+  --bg-hover:    #1C2430;
+  --bg-active:   #17253F;
+  --bg-subtle:   #131921;
+
+  --border-1:      #232A35;
+  --border-2:      #2A323F;
+  --border-strong: #3A4351;
+
+  --fg-primary:   #E6E9EF;
+  --fg-secondary: #B4BAC5;
+  --fg-muted:     #8A919D;
+  --fg-disabled:  #5C6370;
+  --fg-link:      #6B94F0;
+
+  --brand-50:  #17253F;
+  --brand-100: #1E3361;
+  --brand-600: #4F7CE8;
+  --brand-700: #3A6BE4;
+
+  --ok-50:      #0F2A20;
+  --warn-50:    #2B1E0C;
+  --danger-50:  #2A1212;
+  --info-50:    #17253F;
+  --neutral-50: #1C2430;
+
+  --shadow-pop:  0 1px 2px rgba(0,0,0,0.4), 0 8px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,0,0,0.3);
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.25);
 }
