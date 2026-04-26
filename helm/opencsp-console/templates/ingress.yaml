@@ -27,10 +27,11 @@ spec:
             pathType: {{ .pathType }}
             backend:
               service:
-                # 모든 트래픽을 FE로 라우팅 (FE의 Next.js API routes가 BE 프록시)
-                name: {{ include "opencsp-console.fullname" $ }}-fe
+                # 1. path 내부에 별도의 backend.service.name이 선언되어 있으면 그것을 사용
+                # 2. 없으면 기존처럼 기본 fullname-fe 사용
+                name: {{ if .backend }}{{ .backend.service.name }}{{ else }}{{ include "opencsp-console-be.fullname" $ }}-fe{{ end }}
                 port:
-                  number: {{ $.Values.fe.service.port }}
+                  number: {{ if .backend }}{{ .backend.service.port.number }}{{ else }}{{ $.Values.fe.service.port }}{{ end }}
           {{- end }}
     {{- end }}
 {{- end }}
