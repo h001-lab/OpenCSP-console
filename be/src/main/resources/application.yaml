@@ -32,6 +32,7 @@ spring:
     hibernate:
       ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
     show-sql: ${SPRING_JPA_SHOW_SQL:false}
+    open-in-view: false
     properties:
       hibernate:
         dialect: ${SPRING_JPA_DIALECT:org.hibernate.dialect.H2Dialect}
@@ -89,9 +90,9 @@ logging:
           infrastructure:
             security: INFO
             iam: INFO
-            config: DEBUG
-            teleport: DEBUG
-            k8s: DEBUG
+            config: INFO
+            teleport: INFO
+            k8s: INFO
     org:
       springframework:
         ai:

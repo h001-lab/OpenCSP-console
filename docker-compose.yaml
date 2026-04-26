@@ -1,0 +1,18 @@
+services:
+  be:
+    image: opencsp-be:latest
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./be/.env
+
+  fe:
+    image: opencsp-fe:latest
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./fe/.env
+    environment:
+      BACKEND_URL: "http://be:8080"  # .env의 BACKEND_URL을 덮어씀
+    depends_on:
+      - be

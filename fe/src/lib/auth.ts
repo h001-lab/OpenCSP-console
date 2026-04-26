@@ -34,6 +34,7 @@ interface ZitadelProfile {
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  trustHost: true,
   providers: [
     Zitadel({
       issuer: process.env.ZITADEL_ISSUER,
