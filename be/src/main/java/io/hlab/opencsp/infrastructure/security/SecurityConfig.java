@@ -74,6 +74,7 @@ public class SecurityConfig {
             // MDC iam_session_id 설정 (BearerTokenAuthenticationFilter 이후 — SecurityContext 채워진 뒤)
             .addFilterAfter(new MdcContextFilter(), BearerTokenAuthenticationFilter.class)
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/login/**", "/oauth2/**").permitAll()
                 .requestMatchers("/api/public/**").permitAll()
