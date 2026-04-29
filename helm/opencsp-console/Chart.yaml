@@ -3,7 +3,7 @@ name: opencsp-console
 description: OpenCSP Console — self-hosted cloud platform console (Proxmox + cloud-native)
 type: application
 # version / appVersion은 release.yaml에서 --version / --app-version 플래그로 덮어씀
-version: 0.1.10
+version: 0.1.11
 appVersion: "latest"
 home: https://github.com/h001-lab/OpenCSP-console
 sources:

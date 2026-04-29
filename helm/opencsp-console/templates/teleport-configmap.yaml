@@ -28,6 +28,6 @@ data:
     outputs:
       - type: identity
         destination:
-          type: directory
-          path: {{ .Values.pam.identityMountPath }}
+          type: kubernetes_secret
+          name: {{ include "opencsp-console.fullname" . }}-pam-identity
 {{- end }}

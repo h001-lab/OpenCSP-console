@@ -63,9 +63,13 @@ PAM이 사용할 ServiceAccount 이름. provider별로 다름.
 {{- end -}}
 {{- end -}}
 
+
 {{/*
 PAM sidecar (initContainer with restartPolicy: Always for K8s 1.29+ native sidecar).
 provider에 따라 적절한 sidecar 정의를 렌더.
+
+teleport 모드: tbot이 K8s Secret을 매개로 identity를 BE에 공유.
+sidecar는 config 파일만 마운트하고, identity는 K8s API로 직접 Secret에 write.
 */}}
 {{- define "opencsp-console.pamSidecar" -}}
 {{- if eq .Values.pam.provider "teleport" -}}
@@ -77,8 +81,6 @@ provider에 따라 적절한 sidecar 정의를 렌더.
     - start
     - --config=/etc/tbot/tbot.yaml
   volumeMounts:
-    - name: pam-identity
-      mountPath: {{ .Values.pam.identityMountPath }}
     - name: pam-config
       mountPath: /etc/tbot
       readOnly: true
@@ -98,12 +100,19 @@ provider에 따라 적절한 sidecar 정의를 렌더.
 
 {{/*
 PAM이 추가하는 volumes. provider에 따라 다른 볼륨 세트를 렌더.
-공통 규칙: pam-identity는 sidecar가 자격증명을 쓰고 BE가 읽는 emptyDir.
+
+teleport 모드:
+- pam-identity: tbot이 갱신하는 K8s Secret을 BE 컨테이너에 read-only로 마운트.
+                kubelet이 sync해주므로 UID 충돌 없이 0440으로 누구나 읽기 가능.
+- pam-config:   tbot 설정 ConfigMap.
 */}}
 {{- define "opencsp-console.pamVolumes" -}}
 {{- if eq .Values.pam.provider "teleport" -}}
 - name: pam-identity
-  emptyDir: {}
+  secret:
+    secretName: {{ include "opencsp-console.fullname" . }}-pam-identity
+    defaultMode: 0440
+    optional: true
 - name: pam-config
   configMap:
     name: {{ include "opencsp-console.fullname" . }}-pam-config
