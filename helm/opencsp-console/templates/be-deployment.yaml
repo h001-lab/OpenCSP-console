@@ -21,6 +21,11 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- if include "opencsp-console.pamEnabled" . }}
+      serviceAccountName: {{ include "opencsp-console.pamServiceAccountName" . }}
+      initContainers:
+        {{- include "opencsp-console.pamSidecar" . | nindent 8 }}
+      {{- end }}
       containers:
         - name: be
           image: "{{ .Values.be.image.repository }}:{{ .Values.be.image.tag }}"
@@ -54,7 +59,17 @@ spec:
               port: {{ .Values.be.service.port }}
             initialDelaySeconds: 0
             periodSeconds: 10
+          {{- if include "opencsp-console.pamEnabled" . }}
+          volumeMounts:
+            - name: pam-identity
+              mountPath: {{ .Values.pam.identityMountPath }}
+              readOnly: true
+          {{- end }}
           {{- with .Values.be.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+      {{- if include "opencsp-console.pamEnabled" . }}
+      volumes:
+        {{- include "opencsp-console.pamVolumes" . | nindent 8 }}
+      {{- end }}
