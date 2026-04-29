@@ -99,3 +99,47 @@ imagePullSecrets: []
 
 nameOverride: ""
 fullnameOverride: ""
+
+# ─────────────────────────────────────────────
+# PAM (Privileged Access Management) 통합
+#
+# BE에 PAM 도구의 sidecar를 주입해서 인증서/토큰을 받아오는 구조.
+# provider 값에 따라 어떤 PAM 도구와 연동할지 결정.
+#
+# provider: ""           → PAM 통합 없음 (기본값)
+# provider: "teleport"   → Teleport tbot sidecar 자동 주입
+# provider: "<other>"    → 향후 추가 예정
+#
+# 공통 동작: BE 컨테이너의 identityMountPath에 PAM이 발급한 자격증명이 마운트됨.
+# BE 앱은 provider에 상관없이 이 경로에서 인증서를 읽어 사용하면 됨.
+# ─────────────────────────────────────────────
+pam:
+  provider: ""
+  
+  # BE 컨테이너 안에서 자격증명이 마운트될 경로 (provider 공통)
+  identityMountPath: /var/pam/identity
+
+  # ── Teleport 전용 설정 (provider: "teleport"일 때 사용) ──
+  teleport:
+    # Teleport 서버 주소. 클러스터 내부면 authServer 권장.
+    # 둘 중 하나만 채우면 됨. 둘 다 비어있으면 chart render 시점에 fail.
+    authServer: ""    # 예: teleport-teleport-cluster-auth.teleport.svc.cluster.local:3025
+    proxyServer: ""   # 예: teleport.example.com:443
+    
+    # Teleport ProvisionToken 리소스 이름 (값이 아닌 이름 참조)
+    token: ""
+    
+    # tbot이 K8s join 시 사용할 SA. chart가 만들어줌.
+    serviceAccountName: opencsp-tbot
+    
+    image:
+      repository: public.ecr.aws/gravitational/tbot-distroless
+      tag: ""    # 비우면 Chart.appVersion 사용. tbot 버전을 명시하려면 직접 지정.
+      pullPolicy: IfNotPresent
+    
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        memory: 64Mi

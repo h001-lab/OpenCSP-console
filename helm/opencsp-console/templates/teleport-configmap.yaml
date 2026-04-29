@@ -1,0 +1,33 @@
+{{- if eq .Values.pam.provider "teleport" }}
+{{- if and (not .Values.pam.teleport.authServer) (not .Values.pam.teleport.proxyServer) -}}
+{{- fail "pam.provider=teleport requires either pam.teleport.authServer or pam.teleport.proxyServer" -}}
+{{- end }}
+{{- if not .Values.pam.teleport.token -}}
+{{- fail "pam.provider=teleport requires pam.teleport.token (Teleport ProvisionToken name)" -}}
+{{- end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "opencsp-console.fullname" . }}-pam-config
+  labels:
+    {{- include "opencsp-console.labels" . | nindent 4 }}
+    app.kubernetes.io/component: pam-teleport
+data:
+  tbot.yaml: |
+    version: v2
+    {{- if .Values.pam.teleport.authServer }}
+    auth_server: {{ .Values.pam.teleport.authServer }}
+    {{- else }}
+    proxy_server: {{ .Values.pam.teleport.proxyServer }}
+    {{- end }}
+    onboarding:
+      join_method: kubernetes
+      token: {{ .Values.pam.teleport.token | quote }}
+    storage:
+      type: memory
+    outputs:
+      - type: identity
+        destination:
+          type: directory
+          path: {{ .Values.pam.identityMountPath }}
+{{- end }}
