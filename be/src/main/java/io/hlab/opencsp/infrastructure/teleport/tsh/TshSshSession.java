@@ -41,10 +41,12 @@ public class TshSshSession implements Closeable {
      * @param login     SSH 로그인 계정 (root 등)
      */
     public static TshSshSession connect(
-            String tshPath, String proxyAddr, String nodeId, String login) throws IOException {
+        String tshPath, String proxyAddr, String identityPath,
+        String nodeId, String login) throws IOException {
 
         log.atInfo()
                 .addKeyValue("proxy_addr", proxyAddr)
+                .addKeyValue("identity_path", identityPath)
                 .addKeyValue("teleport_node_id", nodeId)
                 .addKeyValue("ssh_login", login)
                 .log("tsh ssh 실행");
@@ -52,6 +54,7 @@ public class TshSshSession implements Closeable {
         ProcessBuilder pb = new ProcessBuilder(
                 tshPath, "ssh",
                 "--proxy=" + proxyAddr,
+                "--identity=" + identityPath,
                 "--insecure",
                 "--no-resume",
                 login + "@" + nodeId
