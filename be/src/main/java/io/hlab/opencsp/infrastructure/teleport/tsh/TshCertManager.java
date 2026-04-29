@@ -47,9 +47,18 @@ public class TshCertManager {
      * MFA가 필요한 환경에서는 수동으로 {@code tsh login}을 먼저 실행해야 한다.
      */
     public void ensureCert() {
+        String identityPath = configStore.get(ConfigCategory.IAM, "teleport.identity.path", 
+                                    "/var/pam/identity/identity");
+        if (!Paths.get(identityPath).toFile().exists()) {
+            throw new IllegalStateException(
+                "Teleport identity 파일이 없습니다: " + identityPath + 
+                " (tbot 사이드카가 정상 동작 중인지 확인하세요)");
+        }
+
         if (Instant.now().plusSeconds(REFRESH_MARGIN_SECONDS).isBefore(certExpiry.get())) {
             return;
         }
+
         // 인증서 파일이 이미 존재하면 수동 login으로 얻은 것으로 간주
         if (privateKeyPath().toFile().exists() && sshCertPath().toFile().exists()) {
             log.atInfo()
@@ -123,18 +132,31 @@ public class TshCertManager {
         String tshPath   = configStore.get(ConfigCategory.IAM, "teleport.tsh.path", "tsh");
         String proxyAddr = configStore.get(ConfigCategory.IAM, "teleport.proxy.url", "")
                 .replaceFirst("^https?://", "");
+        String identityPath = configStore.get(ConfigCategory.IAM, "teleport.identity.path", 
+                    "/var/pam/identity/identity");
         String cluster   = proxyHost();
         try {
             ProcessBuilder pb = new ProcessBuilder(
                     tshPath, "ls",
                     "--proxy=" + proxyAddr,
+                    "--identity=" + identityPath,
                     "--format=json",
                     "--insecure"
             );
             pb.redirectErrorStream(false);
             Process process = pb.start();
             String output   = new String(process.getInputStream().readAllBytes());
-            process.waitFor();
+            String stderr = new String(process.getErrorStream().readAllBytes());
+            int exitCode = process.waitFor();
+        
+            if (exitCode != 0) {
+                log.atWarn()
+                    .addKeyValue("hostname", hostname)
+                    .addKeyValue("exit_code", exitCode)
+                    .addKeyValue("stderr", stderr)
+                    .log("tsh ls 실패");
+                return Optional.empty();
+            }
 
             ObjectMapper mapper = new ObjectMapper();
             JsonNode nodes = mapper.readTree(output);
