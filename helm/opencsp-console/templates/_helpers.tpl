@@ -80,6 +80,11 @@ sidecar는 config 파일만 마운트하고, identity는 K8s API로 직접 Secre
   args:
     - start
     - --config=/etc/tbot/tbot.yaml
+  env:
+    - name: POD_NAMESPACE
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.namespace
   volumeMounts:
     - name: pam-config
       mountPath: /etc/tbot
