@@ -1,0 +1,35 @@
+{{- if eq .Values.pam.provider "teleport" }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "opencsp-console.fullname" . }}-tbot
+  labels:
+    {{- include "opencsp-console.labels" . | nindent 4 }}
+    app.kubernetes.io/component: pam-teleport
+rules:
+  # 최초 생성용 (resourceNames 제약 못 걸어서 별도 rule)
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create"]
+  # 갱신용 (특정 secret만)
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames:
+      - {{ include "opencsp-console.fullname" . }}-pam-identity
+    verbs: ["get", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "opencsp-console.fullname" . }}-tbot
+  labels:
+    {{- include "opencsp-console.labels" . | nindent 4 }}
+    app.kubernetes.io/component: pam-teleport
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.pam.teleport.serviceAccountName }}
+roleRef:
+  kind: Role
+  name: {{ include "opencsp-console.fullname" . }}-tbot
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}
