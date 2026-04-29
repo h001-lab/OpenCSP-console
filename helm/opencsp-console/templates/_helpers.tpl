@@ -116,7 +116,7 @@ teleport 모드:
 - name: pam-identity
   secret:
     secretName: {{ include "opencsp-console.fullname" . }}-pam-identity
-    defaultMode: 0440
+    defaultMode: 0444
     optional: true
 - name: pam-config
   configMap:
