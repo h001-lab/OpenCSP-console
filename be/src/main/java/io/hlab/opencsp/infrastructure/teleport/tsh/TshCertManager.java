@@ -54,22 +54,6 @@ public class TshCertManager {
                 "Teleport identity 파일이 없습니다: " + identityPath + 
                 " (tbot 사이드카가 정상 동작 중인지 확인하세요)");
         }
-
-        if (Instant.now().plusSeconds(REFRESH_MARGIN_SECONDS).isBefore(certExpiry.get())) {
-            return;
-        }
-
-        // 인증서 파일이 이미 존재하면 수동 login으로 얻은 것으로 간주
-        if (privateKeyPath().toFile().exists() && sshCertPath().toFile().exists()) {
-            log.atInfo()
-                    .addKeyValue("key_path", privateKeyPath().toString())
-                    .addKeyValue("cert_path", sshCertPath().toString())
-                    .log("기존 인증서 파일 사용");
-            certExpiry.set(Instant.now().plusSeconds(3600));
-            return;
-        }
-        // 파일 없으면 tsh login 시도 (MFA 없는 환경 또는 TSH_PASSWORD 환경변수 설정된 경우)
-        refreshCert();
     }
 
     /**
