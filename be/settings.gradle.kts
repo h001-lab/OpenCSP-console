@@ -1,1 +1,1 @@
-rootProject.name = "OpenConsole"
+rootProject.name = "OpenCSP"
