@@ -88,6 +88,7 @@ public class ConsoleWebSocketHandler extends AbstractWebSocketHandler {
                 TshSshSession ssh = TshSshSession.connect(
                         tshCertManager.tshPath(),
                         tshCertManager.proxyAddr(),
+                        tshCertManager.identityPath(),
                         consoleSession.getTeleportNodeId(),
                         consoleSession.getTeleportLogin()
                 );

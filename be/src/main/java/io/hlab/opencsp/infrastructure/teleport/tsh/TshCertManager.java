@@ -82,6 +82,11 @@ public class TshCertManager {
         return configStore.get(ConfigCategory.IAM, "teleport.tsh.path", "tsh");
     }
 
+    /** tbot identity 파일 경로 */
+    public String identityPath() {
+        return configStore.get(ConfigCategory.IAM, "teleport.identity.path", "/var/pam/identity/identity");
+    }
+
     /** tsh --proxy 인수용 주소 (host:port) */
     public String proxyAddr() {
         return proxyHost() + ":" + sshProxyPort();
